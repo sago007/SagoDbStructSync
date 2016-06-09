@@ -13,6 +13,7 @@ namespace database {
 
 	DbDatabaseModel ExtractDataModelForTables(DbSyncDb& db, const std::vector<std::string>& table_names) {
 		DbDatabaseModel ret;
+		std::cerr << "Extracting\n";
 		for (const std::string& s : table_names) {
 			ret.tables.push_back(db.GetTable(s));
 			std::vector<std::string> unique_constraint_names = db.GetUniqueConstraintNamesForTable(s);

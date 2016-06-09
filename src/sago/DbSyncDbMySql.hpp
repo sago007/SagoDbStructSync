@@ -8,7 +8,7 @@ class DbSyncDbMySql : public sago::database::DbSyncDb {
 public:
 	DbSyncDbMySql(std::shared_ptr<cppdb::session>& sql, const std::string& schema);
 	DbSyncDbMySql(const DbSyncDbMySql& orig);
-	virtual ~DbSyncDbMySql();
+	virtual ~DbSyncDbMySql() override;
 	
 	virtual bool TableExists(const std::string& tablename) override;
 	virtual bool ColumnExists(const std::string& tablename, const std::string& columnname) override;

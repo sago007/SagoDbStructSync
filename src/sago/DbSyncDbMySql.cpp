@@ -74,6 +74,7 @@ std::vector<std::string> DbSyncDbMySql::GetTableNames() {
 		res >> value;
 		ret.push_back(value);
 	}
+	std::cerr << "Found " << ret.size() << " tables!\n";
 	return ret;
 }
 
@@ -170,6 +171,7 @@ sago::database::DbColumn DbSyncDbMySql::GetColumn(const std::string& tablename, 
 }
 
 sago::database::DbTable DbSyncDbMySql::GetTable(const std::string& tablename) {
+	std::cerr << "Reading " << tablename << "\n";
 	sago::database::DbTable ret;
 	ret.tablename = tablename;
 	std::vector<std::string> column_names = GetColoumNamesFromTable(tablename);
@@ -225,6 +227,7 @@ void  DbSyncDbMySql::CreateTable(const sago::database::DbTable& t) {
 			CreateColumn(t.tablename, c);
 		}
 	}
+	std::cout << "Creating table: " << t.tablename << "\n";
 }
 
 void DbSyncDbMySql::CreateColumn(const std::string& tablename, const sago::database::DbColumn& c) {
