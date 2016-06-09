@@ -43,7 +43,7 @@ public:
 	virtual ~DbSyncDb() {};
 };
 
-
+void ApplyDataModel(const DbDatabaseModel& model, DbSyncDb& db);
 DbDatabaseModel ExtractDataModel(DbSyncDb& db);
 DbDatabaseModel ExtractDataModelForTables(DbSyncDb& db, const std::vector<std::string>& table_names);
 

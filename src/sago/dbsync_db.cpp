@@ -3,6 +3,11 @@
 namespace sago {
 namespace database {
 	
+	void ApplyDataModel(const DbDatabaseModel& model, DbSyncDb& db) {
+		for (const DbTable& t : model.tables) {
+			db.CreateTable(t);
+		}
+	}
 
 	DbDatabaseModel ExtractDataModel(DbSyncDb& db) {
 		DbDatabaseModel ret;

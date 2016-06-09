@@ -219,9 +219,12 @@ sago::database::DbForeignKeyConstraint DbSyncDbMySql::GetForeignKeyConstraint(co
 }
 
 void  DbSyncDbMySql::CreateTable(const sago::database::DbTable& t) {
-	std::string create_table_sql = "CREATE TABLE "+t.tablename+" ( " + this->sago_id + " SERIAL )";
-	cppdb::statement st = *sql << create_table_sql;
-	st.exec();
+	if (!TableExists(t.tablename)) {
+		std::string create_table_sql = "CREATE TABLE "+t.tablename+" ( " + this->sago_id + " SERIAL )";
+		cppdb::statement st = *sql << create_table_sql;
+		st.exec();
+		std::cerr << "Created it \n";
+	}
 	for (const sago::database::DbColumn& c : t.columns) {
 		if (!ColumnExists(t.tablename, c.name)) {
 			CreateColumn(t.tablename, c);
@@ -231,12 +234,12 @@ void  DbSyncDbMySql::CreateTable(const sago::database::DbTable& t) {
 }
 
 void DbSyncDbMySql::CreateColumn(const std::string& tablename, const sago::database::DbColumn& c) {
-	std::string alter_table_sql = "ALTER TABLE "+tablename+" ADD " +c.name;
+	std::string alter_table_sql = "ALTER TABLE "+tablename+" ADD `" +c.name +"`";
 	switch (c.type) {
 		case sago::database::DbType::NUMBER:
 		{
 			char buffer[200];
-			snprintf(buffer, sizeof(buffer), " NUMBER(%i,%i) ", c.length,c.scale);
+			snprintf(buffer, sizeof(buffer), " NUMERIC(%i,%i) ", c.length,c.scale);
 			alter_table_sql += buffer;
 		}
 		break;

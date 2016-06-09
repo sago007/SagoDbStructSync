@@ -121,7 +121,8 @@ int main(int argc, const char* argv[])
 		{
 			cereal::JSONInputArchive archive( *input );
 			archive (cereal::make_nvp("dbm",dbm));
-		}		
+		}	
+		sago::database::ApplyDataModel(dbm, *dbi);
 	}
 	if (writeOutput) {
 		dbm = sago::database::ExtractDataModel(*dbi);
