@@ -7,6 +7,12 @@ namespace database {
 		for (const DbTable& t : model.tables) {
 			db.CreateTable(t);
 		}
+		for (const DbUniqueConstraint& uc : model.unique_constraints ) {
+			db.CreateUniqueConstraint(uc);
+		}
+		for (const DbForeignKeyConstraint& fk : model.foreign_keys ) {
+			db.CreateForeignKeyConstraint(fk);
+		}
 	}
 
 	DbDatabaseModel ExtractDataModel(DbSyncDb& db) {
