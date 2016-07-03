@@ -9,5 +9,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE} -O2")
 include_directories("include")
 
 find_package(Boost COMPONENTS program_options REQUIRED)
-add_executable(dbsync src/dbsync.cpp src/sago/dbsync.cpp src/sago/dbsync_db.cpp src/sago/DbSyncDbOracle.cpp src/sago/DbSyncDbMySql.cpp)
-TARGET_LINK_LIBRARIES( dbsync ${Boost_LIBRARIES} cppdb )
+add_library(SagoDbStructSync src/sago/dbsync.cpp src/sago/dbsync_db.cpp src/sago/DbSyncDbOracle.cpp src/sago/DbSyncDbMySql.cpp)
+add_executable(dbsync src/dbsync.cpp)
+TARGET_LINK_LIBRARIES( dbsync SagoDbStructSync ${Boost_LIBRARIES} cppdb )

@@ -5,4 +5,6 @@ Makefile
 cmake_install.cmake
 install_manifest.txt
 dbsync
+libSagoDbStructSync.a
+build
 nbproject
