@@ -8,3 +8,5 @@ dbsync
 libSagoDbStructSync.a
 build
 nbproject
+Testing
+CTestTestfile.cmake
