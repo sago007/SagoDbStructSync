@@ -13,7 +13,6 @@
 
 #include "DbSyncDbMySql.hpp"
 
-using std::string;
 using std::vector;
 
 DbSyncDbMySql::DbSyncDbMySql(std::shared_ptr<cppdb::session>& sql, const std::string& schema) : sql(sql), schema(schema) {
@@ -120,14 +119,14 @@ sago::database::DbColumn DbSyncDbMySql::GetColumn(const std::string& tablename, 
 		   "FROM INFORMATION_SCHEMA.COLUMNS "
            "WHERE table_schema = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?" << schema << tablename << columnname; 
 	if (res.next()) {
-		string name;
-		string data_type;
+		std::string name;
+		std::string data_type;
 		int max_length = 0;
 		int numeric_precision = 0;
 		int numeric_scale = 0;
-		string nullable;
+		std::string nullable;
 		int hasDefault = false;
-		string defaultValue;
+		std::string defaultValue;
 		res >> name >> data_type >> max_length >> numeric_precision >> numeric_scale >> nullable >> hasDefault >> defaultValue;
 		ret.name = name;
 		bool type_recognized = false;
@@ -158,7 +157,7 @@ sago::database::DbColumn DbSyncDbMySql::GetColumn(const std::string& tablename, 
 		}
 		if (!type_recognized) {
 			std::cerr << "Failure\n";
-			throw sago::database::DbException("Unregognized type", string("This was not regonized: ")+data_type, tablename, schema);
+			throw sago::database::DbException("Unregognized type", std::string("This was not regonized: ")+data_type, tablename, schema);
 		}
 		if (nullable == "YES") {
 			ret.nullable = true;
@@ -175,7 +174,7 @@ sago::database::DbTable DbSyncDbMySql::GetTable(const std::string& tablename) {
 	sago::database::DbTable ret;
 	ret.tablename = tablename;
 	std::vector<std::string> column_names = GetColoumNamesFromTable(tablename);
-	for (const string& s : column_names) {
+	for (const std::string& s : column_names) {
 		ret.columns.push_back(GetColumn(tablename, s));
 	}
 	return ret;
@@ -188,7 +187,7 @@ sago::database::DbUniqueConstraint DbSyncDbMySql::GetUniqueConstraint(const std:
 	cppdb::result res = *sql << "select COLUMN_NAME from information_schema.STATISTICS "
 			"WHERE INDEX_SCHEMA = ? AND TABLE_NAME = ? and index_name = ? ORDER BY SEQ_IN_INDEX" << schema << tablename << name;
 	while (res.next()) {
-		string value;
+		std::string value;
 		res >> value;
 		ret.columns.push_back(value);
 	}
@@ -207,9 +206,9 @@ sago::database::DbForeignKeyConstraint DbSyncDbMySql::GetForeignKeyConstraint(co
 		"AND CONSTRAINT_NAME = ?"
 		"ORDER BY POSITION_IN_UNIQUE_CONSTRAINT" << schema << tablename << name;
 	while (res.next()) {
-		string columnname;
-		string reftablename;
-		string refcolumnname;
+		std::string columnname;
+		std::string reftablename;
+		std::string refcolumnname;
 		res >> columnname >> reftablename >> refcolumnname;
 		ret.foreigntablename = reftablename;
 		ret.columnnames.push_back(columnname);
