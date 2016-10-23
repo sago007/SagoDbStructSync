@@ -138,7 +138,7 @@ sago::database::DbColumn DbSyncDbMySql::GetColumn(const std::string& tablename, 
 			ret.defaultValue = defaultValue;
 			type_recognized = true;
 		}
-		if (data_type == "varchar") {
+		if (data_type == "varchar" || data_type == "char") {
 			ret.length = max_length;
 			ret.type = sago::database::DbType::TEXT;
 			type_recognized = true;
@@ -203,7 +203,7 @@ sago::database::DbForeignKeyConstraint DbSyncDbMySql::GetForeignKeyConstraint(co
 		"WHERE "
 		"REFERENCED_TABLE_SCHEMA = ? "
 		"AND TABLE_NAME = ? "
-		"AND CONSTRAINT_NAME = ?"
+		"AND CONSTRAINT_NAME = ? "
 		"ORDER BY POSITION_IN_UNIQUE_CONSTRAINT" << schema << tablename << name;
 	while (res.next()) {
 		std::string columnname;
