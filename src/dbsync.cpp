@@ -9,6 +9,8 @@
 using std::cout;
 using std::vector;
 
+const char* const mysqlConnectString = "mysql:database=dbsync_test;user=testuser;password=password;opt_reconnect=1";
+
 int main(int argc, const char* argv[])
 {
 	boost::program_options::options_description desc("Allowed options");
@@ -24,9 +26,10 @@ int main(int argc, const char* argv[])
 	boost::program_options::notify(vm);
 	if (vm.count("help")) {
 		cout << desc << "\n";
+		cout << "An example connectstring for mysql: " << mysqlConnectString <<  "\n";
 		return 1;
 	}
-	std::string connectstring = "mysql:database=dbsync_test;user=testuser;password=password;opt_reconnect=1";
+	std::string connectstring = mysqlConnectString;
 	if (vm.count("connectstring")) {
 		connectstring = vm["connectstring"].as<std::string>();
 	}
