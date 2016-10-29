@@ -4,6 +4,10 @@
 #include "dbsync_db.hpp"
 #include <cppdb/frontend.h>
 
+namespace sago {
+namespace database {
+
+
 class DbSyncDbOracle : public sago::database::DbSyncDb {
 public:
 	DbSyncDbOracle(std::shared_ptr<cppdb::session>& sql);
@@ -14,6 +18,9 @@ public:
 private:
 	std::shared_ptr<cppdb::session> sql;
 };
+
+}  //namespace database
+}  //namespace sago 
 
 #endif /* DBSYNCDBORACLE_HPP */
 

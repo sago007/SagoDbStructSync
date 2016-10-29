@@ -41,7 +41,7 @@ BOOST_AUTO_TEST_CASE( It_can_connect ) {
 	std::shared_ptr<cppdb::session> db(new cppdb::session(connectstring));
 	std::shared_ptr<sago::database::DbSyncDb> dbi;
 	{
-		dbi = std::shared_ptr<sago::database::DbSyncDb>(new DbSyncDbMySql(db,schema_name));
+		dbi = std::shared_ptr<sago::database::DbSyncDb>(new sago::database::DbSyncDbMySql(db,schema_name));
 	}
 	
 	sago::database::DbTable t;

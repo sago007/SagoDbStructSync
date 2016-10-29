@@ -15,6 +15,10 @@
 
 using std::vector;
 
+
+namespace sago {
+namespace database {
+
 DbSyncDbMySql::DbSyncDbMySql(std::shared_ptr<cppdb::session>& sql, const std::string& schema) : sql(sql), schema(schema) {
 }
 
@@ -315,3 +319,6 @@ void DbSyncDbMySql::CreateForeignKeyConstraint(const sago::database::DbForeignKe
 	cppdb::statement st = *sql << alter_table_sql;
 	st.exec();
 }
+
+}  //namespace database
+}  //namespace sago 

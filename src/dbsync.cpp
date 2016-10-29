@@ -5,6 +5,7 @@
 #include <fstream>
 #include "sago/DbSyncDbOracle.hpp"
 #include "sago/DbSyncDbMySql.hpp"
+#include "sago/DbSyncValidator.hpp"
 
 using std::cout;
 using std::vector;
@@ -60,9 +61,10 @@ int main(int argc, const char* argv[])
 	std::shared_ptr<cppdb::session> db = std::make_shared<cppdb::session>(connectstring);
 	std::shared_ptr<sago::database::DbSyncDb> dbi;
 	{
-		dbi = std::shared_ptr<sago::database::DbSyncDb>(new DbSyncDbMySql(db,schema_name));
+		dbi = std::shared_ptr<sago::database::DbSyncDb>(new sago::database::DbSyncDbMySql(db,schema_name));
 	}
 	sago::database::DbDatabaseModel dbm;
+	sago::database::DbSyncValidator validator;
 	if (readInput) {
 		{
 			cereal::JSONInputArchive archive( *input );
@@ -77,5 +79,6 @@ int main(int argc, const char* argv[])
 			archive ( cereal::make_nvp("dbm",dbm));
 		}
 	}
+	validator.ValidateModel(dbm);
 	return 0;
 }

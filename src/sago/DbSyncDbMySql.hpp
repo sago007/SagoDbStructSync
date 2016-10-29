@@ -4,6 +4,10 @@
 #include "dbsync_db.hpp"
 #include <cppdb/frontend.h>
 
+
+namespace sago {
+namespace database {
+
 class DbSyncDbMySql : public sago::database::DbSyncDb {
 public:
 	DbSyncDbMySql(std::shared_ptr<cppdb::session>& sql, const std::string& schema);
@@ -36,6 +40,9 @@ private:
 	std::string sago_prefix = "SAGO_";
 	
 };
+
+}  //namespace database
+}  //namespace sago 
 
 #endif /* DBSYNCDBMYSQL_HPP */
 

@@ -1,5 +1,9 @@
 #include "DbSyncDbOracle.hpp"
 
+
+namespace sago {
+namespace database {
+
 DbSyncDbOracle::DbSyncDbOracle(std::shared_ptr<cppdb::session>& sql) : sql(sql) {
 }
 
@@ -16,3 +20,6 @@ bool DbSyncDbOracle::TableExists(const std::string& tablename) {
 	}
 	return false;
 }
+
+}  //namespace database
+}  //namespace sago 
