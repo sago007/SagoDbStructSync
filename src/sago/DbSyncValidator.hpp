@@ -23,6 +23,9 @@ public:
 private:
 	bool checkNamesCase = true;
 	bool checkNamesChars = true;
+	bool checkNamesLength =  true;
+	int nameMaxLength = 30;
+	void ValidateName(const std::string& name, const std::string& path);
 };
 
 }  //namespace database
