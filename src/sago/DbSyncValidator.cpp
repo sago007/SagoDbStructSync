@@ -18,23 +18,28 @@ namespace database {
 	
 	void DbSyncValidator::ValidateTable(const DbTable& table) {
 		for (const DbColumn& c : table.columns) {
-			ValidateColumn(c);
+			ValidateColumn(c, table);
 		}
 	}
 	
-	void DbSyncValidator::ValidateColumn(const DbColumn& column) {
-		
+	void DbSyncValidator::ValidateColumn(const DbColumn& column, const DbTable& table) {
+		ValidateName(column.name, table.tablename);
 	}
 	
 	void DbSyncValidator::ValidateForeignKey(const DbForeignKeyConstraint& constraint) {
-		
+		ValidateName(constraint.name, constraint.tablename);
 	}
 	
 	void DbSyncValidator::ValidateUniqueConstraint(const DbUniqueConstraint& constraint) {
-		
+		ValidateName(constraint.name, constraint.tablename);
 	}
 	
 	void DbSyncValidator::ValidateName(const std::string& name, const std::string& path) {
+		if (checkNamesLength && name.length() > static_cast<size_t>(nameMaxLength) ) {
+			std::string header = "Name validation error";
+			std::string errmsg = std::string("Length of name \"")+name+"\" is too long. Length: "+std::to_string(name.length())+", Max length: "+std::to_string(nameMaxLength);
+			throw DbValidationException(header, errmsg, path, schemaNameBeingValidated);
+		}
 	}
 	
 }  //database
