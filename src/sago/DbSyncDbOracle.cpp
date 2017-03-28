@@ -2,24 +2,24 @@
 
 
 namespace sago {
-namespace database {
+	namespace database {
 
-DbSyncDbOracle::DbSyncDbOracle(std::shared_ptr<cppdb::session>& sql) : sql(sql) {
-}
+		DbSyncDbOracle::DbSyncDbOracle(std::shared_ptr<cppdb::session>& sql) : sql(sql) {
+		}
 
-DbSyncDbOracle::DbSyncDbOracle(const DbSyncDbOracle& orig) {
-}
+		DbSyncDbOracle::DbSyncDbOracle(const DbSyncDbOracle& orig) {
+		}
 
-DbSyncDbOracle::~DbSyncDbOracle() {
-}
+		DbSyncDbOracle::~DbSyncDbOracle() {
+		}
 
-bool DbSyncDbOracle::TableExists(const std::string& tablename) {
-	cppdb::result res = *sql << "SELECT 1 FROM all_tables WHERE OWNER = sys_context('userenv','current_schema') AND TABLE_NAME = ?" << tablename;
-	if (res.next()) {
-		return true;
-	}
-	return false;
-}
+		bool DbSyncDbOracle::TableExists(const std::string& tablename) {
+			cppdb::result res = *sql << "SELECT 1 FROM all_tables WHERE OWNER = sys_context('userenv','current_schema') AND TABLE_NAME = ?" << tablename;
+			if (res.next()) {
+				return true;
+			}
+			return false;
+		}
 
-}  //namespace database
-}  //namespace sago 
+	} //namespace database
+} //namespace sago

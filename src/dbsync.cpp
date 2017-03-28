@@ -12,8 +12,7 @@ using std::vector;
 
 const char* const mysqlConnectString = "mysql:database=dbsync_test;user=testuser;password=password;opt_reconnect=1";
 
-int main(int argc, const char* argv[])
-{
+int main(int argc, const char* argv[]) {
 	boost::program_options::options_description desc("Allowed options");
 	desc.add_options()
 		("help,h", "Print basic usage information to stdout and quits")
@@ -21,13 +20,13 @@ int main(int argc, const char* argv[])
 		("schema,s", boost::program_options::value<std::string>(), "A string for use with ")
 		("output-file,o", boost::program_options::value<std::string>(), "The output file. If blank stdout is used. If not set no output are generated")
 		("input-file,i", boost::program_options::value<std::string>(), "The input file. If blank stdin is used. If not set no input is read")
-	;
+		;
 	boost::program_options::variables_map vm;
 	boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
 	boost::program_options::notify(vm);
 	if (vm.count("help")) {
 		cout << desc << "\n";
-		cout << "An example connectstring for mysql: " << mysqlConnectString <<  "\n";
+		cout << "An example connectstring for mysql: " << mysqlConnectString << "\n";
 		return 1;
 	}
 	std::string connectstring = mysqlConnectString;
@@ -64,22 +63,22 @@ int main(int argc, const char* argv[])
 	std::shared_ptr<cppdb::session> db = std::make_shared<cppdb::session>(connectstring);
 	std::shared_ptr<sago::database::DbSyncDb> dbi;
 	{
-		dbi = std::shared_ptr<sago::database::DbSyncDb>(new sago::database::DbSyncDbMySql(db,schema_name));
+		dbi = std::shared_ptr<sago::database::DbSyncDb>(new sago::database::DbSyncDbMySql(db, schema_name));
 	}
 	sago::database::DbDatabaseModel dbm;
 	sago::database::DbSyncValidator validator;
 	if (readInput) {
 		{
-			cereal::JSONInputArchive archive( *input );
-			archive (cereal::make_nvp("dbm",dbm));
-		}	
+			cereal::JSONInputArchive archive(*input);
+			archive(cereal::make_nvp("dbm", dbm));
+		}
 		sago::database::ApplyDataModel(dbm, *dbi);
 	}
 	if (writeOutput) {
 		dbm = sago::database::ExtractDataModel(*dbi);
 		{
-			cereal::JSONOutputArchive archive( *output );
-			archive ( cereal::make_nvp("dbm",dbm));
+			cereal::JSONOutputArchive archive(*output);
+			archive(cereal::make_nvp("dbm", dbm));
 		}
 	}
 	validator.ValidateModel(dbm);

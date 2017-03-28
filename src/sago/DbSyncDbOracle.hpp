@@ -5,22 +5,21 @@
 #include <cppdb/frontend.h>
 
 namespace sago {
-namespace database {
+	namespace database {
 
+		class DbSyncDbOracle : public sago::database::DbSyncDb {
+		public:
+			DbSyncDbOracle(std::shared_ptr<cppdb::session>& sql);
+			DbSyncDbOracle(const DbSyncDbOracle& orig);
+			virtual ~DbSyncDbOracle();
 
-class DbSyncDbOracle : public sago::database::DbSyncDb {
-public:
-	DbSyncDbOracle(std::shared_ptr<cppdb::session>& sql);
-	DbSyncDbOracle(const DbSyncDbOracle& orig);
-	virtual ~DbSyncDbOracle();
-	
-	virtual bool TableExists(const std::string& tablename) override;
-private:
-	std::shared_ptr<cppdb::session> sql;
-};
+			virtual bool TableExists(const std::string& tablename) override;
+		private:
+			std::shared_ptr<cppdb::session> sql;
+		};
 
-}  //namespace database
-}  //namespace sago 
+	} //namespace database
+} //namespace sago
 
 #endif /* DBSYNCDBORACLE_HPP */
 
