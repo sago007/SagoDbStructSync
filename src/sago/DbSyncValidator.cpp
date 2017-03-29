@@ -34,10 +34,41 @@ namespace sago {
 		}
 
 		void DbSyncValidator::ValidateName(const std::string& name, const std::string& path) {
+			if (name.length() < 1) {
+				std::string header = "Name validation error";
+				std::string errmsg = std::string("Empty name detected");
+				throw DbValidationException(header, errmsg, path, schemaNameBeingValidated);
+			}
 			if (checkNamesLength && name.length() > static_cast<size_t> (nameMaxLength)) {
 				std::string header = "Name validation error";
 				std::string errmsg = std::string("Length of name \"") + name + "\" is too long. Length: " + std::to_string(name.length()) + ", Max length: " + std::to_string(nameMaxLength);
 				throw DbValidationException(header, errmsg, path, schemaNameBeingValidated);
+			}
+			if (name[0] >= '0' && name[0] <= '9') {
+				std::string header = "Name validation error";
+				std::string errmsg = std::string("A name may not start with a number. But \""+name+"\" start with a '"+name[0]+"'");
+				throw DbValidationException(header, errmsg, path, schemaNameBeingValidated);
+			}
+			if (checkNamesChars) {
+				for (char c : name) {
+					if (c >= 'A' && c <= 'Z' ) {
+						continue;
+					}
+					if (c >= 'a' && c <= 'z' ) {
+						continue;
+					}
+					if (c >= '0' && c <= '9' ) {
+						continue;
+					}
+					if (c == '_') {
+						continue;
+					}
+					{
+						std::string header = "Name validation error";
+						std::string errmsg = std::string("A name may not start with a number. But \""+name+"\" start with a '"+name[0]+"'");
+						throw DbValidationException(header, errmsg, path, schemaNameBeingValidated);
+					}
+				}
 			}
 		}
 

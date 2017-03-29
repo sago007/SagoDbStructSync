@@ -19,13 +19,14 @@ namespace sago {
 			void ValidateColumn(const DbColumn& column, const DbTable& table);
 			void ValidateForeignKey(const DbForeignKeyConstraint& constraint);
 			void ValidateUniqueConstraint(const DbUniqueConstraint& constraint);
+			void ValidateName(const std::string& name, const std::string& path_for_use_in_the_error_message);
 		private:
 			bool checkNamesCase = true;
 			bool checkNamesChars = true;
 			bool checkNamesLength = true;
 			int nameMaxLength = 30;
 			std::string schemaNameBeingValidated = "";
-			void ValidateName(const std::string& name, const std::string& path_for_use_in_the_error_message);
+			void ValidateDuplicates();
 		};
 
 	} //namespace database
