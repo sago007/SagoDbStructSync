@@ -1,0 +1,4 @@
+#! /bin/bash
+set -e
+
+docker build . -f extra/docker/Dockerfile.Ubuntu16.04.build -t sagodbsync_test
