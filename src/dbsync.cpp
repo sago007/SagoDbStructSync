@@ -10,26 +10,43 @@
 using std::cout;
 using std::vector;
 
+#ifndef VERSIONNUMBER
+#define VERSIONNUMBER "0.1.0"
+#endif
+
 const char* const mysqlConnectString = "mysql:database=dbsync_test;user=testuser;password=password;opt_reconnect=1";
+const char* const SAGO_CONNECTION_STRING = "SAGO_CONNECTION_STRING";
 
 int main(int argc, const char* argv[]) {
 	boost::program_options::options_description desc("Allowed options");
 	desc.add_options()
+		("version", "Print version information and quit")
 		("help,h", "Print basic usage information to stdout and quits")
-		("connectstring", boost::program_options::value<std::string>(), "A string for use with ")
-		("schema,s", boost::program_options::value<std::string>(), "A string for use with ")
+		("connectstring", boost::program_options::value<std::string>(), "The connect string to use. If not set the env \"SAGO_CONNECTION_STRING\" will be used.")
+		("schema,s", boost::program_options::value<std::string>(), "The schema to import to or export from")
 		("output-file,o", boost::program_options::value<std::string>(), "The output file. If blank stdout is used. If not set no output are generated")
 		("input-file,i", boost::program_options::value<std::string>(), "The input file. If blank stdin is used. If not set no input is read")
 		;
 	boost::program_options::variables_map vm;
 	boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
 	boost::program_options::notify(vm);
+	if (vm.count("version")) {
+		std::cout << "dbsync " << VERSIONNUMBER << "\n";
+		return 0;
+	}
 	if (vm.count("help")) {
 		cout << desc << "\n";
 		cout << "An example connectstring for mysql: " << mysqlConnectString << "\n";
-		return 1;
+		if (getenv(SAGO_CONNECTION_STRING)) {
+			std::cout << "The environment " << SAGO_CONNECTION_STRING << " is currently set\n";
+		}
+		return 0;
 	}
 	std::string connectstring = mysqlConnectString;
+	const char* connectstring_env = getenv(SAGO_CONNECTION_STRING);
+	if (connectstring_env) {
+		connectstring = connectstring_env;
+	}
 	if (vm.count("connectstring")) {
 		connectstring = vm["connectstring"].as<std::string>();
 	}
