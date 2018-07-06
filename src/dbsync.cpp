@@ -22,6 +22,7 @@ int main(int argc, const char* argv[]) {
 	desc.add_options()
 		("version", "Print version information and quit")
 		("help,h", "Print basic usage information to stdout and quits")
+		("config,c", boost::program_options::value<std::vector<std::string> >(), "Read a config file with the values. Can be given multiple times")
 		("connectstring", boost::program_options::value<std::string>(), "The connect string to use. If not set the env \"SAGO_CONNECTION_STRING\" will be used.")
 		("schema,s", boost::program_options::value<std::string>(), "The schema to import to or export from")
 		("output-file,o", boost::program_options::value<std::string>(), "The output file. If blank stdout is used. If not set no output are generated")
@@ -41,6 +42,14 @@ int main(int argc, const char* argv[]) {
 			std::cout << "The environment " << SAGO_CONNECTION_STRING << " is currently set\n";
 		}
 		return 0;
+	}
+	if (vm.count("config")) {
+		std::vector<std::string> config_filenames = vm["config"].as<std::vector<std::string> >();
+		for ( const std::string& s : config_filenames) {
+			std::ifstream config_file(s);
+			store(parse_config_file(config_file, desc), vm);
+			notify(vm);
+		}
 	}
 	std::string connectstring = mysqlConnectString;
 	const char* connectstring_env = getenv(SAGO_CONNECTION_STRING);
