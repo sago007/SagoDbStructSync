@@ -36,6 +36,11 @@
 using std::cout;
 using std::vector;
 
+struct CommandArguments {
+	bool validate = true;
+	int validateLength = 30;
+};
+
 #ifndef VERSIONNUMBER
 #define VERSIONNUMBER "0.1.0"
 #endif
@@ -44,6 +49,7 @@ const char* const mysqlConnectString = "mysql:database=dbsync_test;user=testuser
 const char* const SAGO_CONNECTION_STRING = "SAGO_CONNECTION_STRING";
 
 int main(int argc, const char* argv[]) {
+	CommandArguments commandArguments;
 	boost::program_options::options_description desc("Allowed options");
 	desc.add_options()
 		("version", "Print version information and quit")
@@ -53,6 +59,8 @@ int main(int argc, const char* argv[]) {
 		("schema,s", boost::program_options::value<std::string>(), "The schema to import to or export from")
 		("output-file,o", boost::program_options::value<std::string>(), "The output file. If blank stdout is used. If not set no output are generated")
 		("input-file,i", boost::program_options::value<std::string>(), "The input file. If blank stdin is used. If not set no input is read")
+		("validate", boost::program_options::value<int>(), "If 0 do not validate. If 1 perform validation.")
+		("validate-name-length", boost::program_options::value<int>(), "Validate that length of names are less than this number. 0 to disable")
 		;
 	boost::program_options::variables_map vm;
 	boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
@@ -76,6 +84,12 @@ int main(int argc, const char* argv[]) {
 			store(parse_config_file(config_file, desc), vm);
 			notify(vm);
 		}
+	}
+	if (vm.count("validate")) {
+		commandArguments.validate = vm["validate"].as<int>();
+	}
+	if (vm.count("validate-name-length")) {
+		commandArguments.validateLength = vm["validate-name-length"].as<int>();
 	}
 	std::string connectstring = mysqlConnectString;
 	const char* connectstring_env = getenv(SAGO_CONNECTION_STRING);
@@ -119,6 +133,10 @@ int main(int argc, const char* argv[]) {
 	}
 	sago::database::DbDatabaseModel dbm;
 	sago::database::DbSyncValidator validator;
+	if (commandArguments.validateLength) {
+		validator.nameMaxLength = commandArguments.validateLength;
+		validator.checkNamesLength = true;
+	}
 	if (readInput) {
 		{
 			cereal::JSONInputArchive archive(*input);
@@ -133,6 +151,8 @@ int main(int argc, const char* argv[]) {
 			archive(cereal::make_nvp("dbm", dbm));
 		}
 	}
-	validator.ValidateModel(dbm);
+	if (commandArguments.validate) {
+		validator.ValidateModel(dbm);
+	}
 	return 0;
 }

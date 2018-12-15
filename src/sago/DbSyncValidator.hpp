@@ -46,11 +46,11 @@ namespace sago {
 			void ValidateForeignKey(const DbForeignKeyConstraint& constraint);
 			void ValidateUniqueConstraint(const DbUniqueConstraint& constraint);
 			void ValidateName(const std::string& name, const std::string& path_for_use_in_the_error_message);
-		private:
 			bool checkNamesCase = true;
 			bool checkNamesChars = true;
-			bool checkNamesLength = true;
+			bool checkNamesLength = false;
 			int nameMaxLength = 30;
+		private:
 			std::string schemaNameBeingValidated = "";
 			void ValidateDuplicates();
 		};

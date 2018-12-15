@@ -60,7 +60,7 @@ namespace sago {
 		}
 
 		void DbSyncValidator::ValidateName(const std::string& name, const std::string& path) {
-			if (name.length() < 1) {
+			if (name.empty()) {
 				std::string header = "Name validation error";
 				std::string errmsg = std::string("Empty name detected");
 				throw DbValidationException(header, errmsg, path, schemaNameBeingValidated);
@@ -91,7 +91,7 @@ namespace sago {
 					}
 					{
 						std::string header = "Name validation error";
-						std::string errmsg = std::string("A name may not start with a number. But \""+name+"\" start with a '"+name[0]+"'");
+						std::string errmsg = std::string("A illigal char detected. Name \""+name+"\" contains '"+c+"'");
 						throw DbValidationException(header, errmsg, path, schemaNameBeingValidated);
 					}
 				}
