@@ -132,7 +132,7 @@ namespace sago {
 
 		sago::database::DbColumn DbSyncDbMySql::GetColumn(const std::string& tablename, const std::string& columnname) {
 			sago::database::DbColumn ret;
-			cppdb::result res = *sql << "SELECT COLUMN_NAME,DATA_TYPE,CHARACTER_MAXIMUM_LENGTH,NUMERIC_PRECISION,NUMERIC_SCALE,IS_NULLABLE,COLUMN_DEFAULT IS NOT NULL,COLUMN_DEFAULT "
+			cppdb::result res = *sql << "SELECT COLUMN_NAME,DATA_TYPE,CHARACTER_MAXIMUM_LENGTH,NUMERIC_PRECISION,NUMERIC_SCALE,IS_NULLABLE,COLUMN_DEFAULT IS NOT NULL,COLUMN_DEFAULT,EXTRA "
 				"FROM INFORMATION_SCHEMA.COLUMNS "
 				"WHERE table_schema = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?" << schema << tablename << columnname;
 			if (res.next()) {
@@ -144,7 +144,8 @@ namespace sago {
 				std::string nullable;
 				int hasDefault = false;
 				std::string defaultValue;
-				res >> name >> data_type >> max_length >> numeric_precision >> numeric_scale >> nullable >> hasDefault >> defaultValue;
+				std::string extra;
+				res >> name >> data_type >> max_length >> numeric_precision >> numeric_scale >> nullable >> hasDefault >> defaultValue >> extra;
 				ret.name = name;
 				bool type_recognized = false;
 				if (data_type == "int" || data_type == "bigint" || data_type == "decimal") {
@@ -175,6 +176,9 @@ namespace sago {
 				if (!type_recognized) {
 					std::cerr << "Failure\n";
 					throw sago::database::DbException("Unregognized type", std::string("This was not regonized: ") + data_type, tablename, schema);
+				}
+				if (extra == "auto_increment") {
+					ret.autoIncrement = true;
 				}
 				if (nullable == "YES") {
 					ret.nullable = true;
@@ -236,6 +240,12 @@ namespace sago {
 		void DbSyncDbMySql::CreateTable(const sago::database::DbTable& t) {
 			if (!TableExists(t.tablename)) {
 				std::string create_table_sql = "CREATE TABLE " + t.tablename + " ( " + this->sago_id + " SERIAL )";
+				for (const sago::database::DbColumn& c : t.columns) {
+					if (c.autoIncrement) {
+						//MySQL is limited to one auto increment coloumn, so if we have one then use that.
+						create_table_sql = "CREATE TABLE " + t.tablename + " ( " + c.name + " SERIAL )";
+					}
+				}
 				cppdb::statement st = *sql << create_table_sql;
 				st.exec();
 				std::cerr << "Created it \n";
@@ -255,6 +265,9 @@ namespace sago {
 				{
 					char buffer[200];
 					snprintf(buffer, sizeof (buffer), " NUMERIC(%i,%i) ", c.length, c.scale);
+					if (c.scale == 0) {
+						snprintf(buffer, sizeof (buffer), " INT(%i) ", c.length);
+					}
 					alter_table_sql += buffer;
 				}
 					break;
@@ -291,8 +304,17 @@ namespace sago {
 			if (!c.nullable) {
 				alter_table_sql += " NOT NULL";
 			}
+			if (c.autoIncrement) {
+				alter_table_sql += " AUTO_INCREMENT";
+			}
+			std::cerr << "Failed: " << alter_table_sql << "\n";
 			cppdb::statement st = *sql << alter_table_sql;
-			st.exec();
+			try {
+				st.exec();
+			} catch (std::exception& e) {
+				std::cerr << "Failed: " << alter_table_sql << "\n";
+				throw;
+			}
 		}
 
 		void DbSyncDbMySql::CreateUniqueConstraint(const sago::database::DbUniqueConstraint& c) {
@@ -300,13 +322,22 @@ namespace sago {
 				std::cerr << "Warning: Contraint " << c.name << " on " << c.tablename << " has no columns\n";
 				return;
 			}
-			std::string alter_table_sql = "ALTER TABLE " + c.tablename + " ADD CONSTRAINT " + c.name + " UNIQUE ( " + c.columns.at(0);
+			std::string keyname_plus_type = c.name+" UNIQUE";
+			if (c.name == "PRIMARY") {
+				keyname_plus_type = "PRIMARY KEY";
+			}
+			std::string alter_table_sql = "ALTER TABLE " + c.tablename + " ADD CONSTRAINT " + keyname_plus_type + " ( " + c.columns.at(0);
 			for (size_t i = 1; i < c.columns.size(); ++i) {
 				alter_table_sql += ", " + c.columns.at(i);
 			}
 			alter_table_sql += ")";
+			std::cout << alter_table_sql << "\n";
 			cppdb::statement st = *sql << alter_table_sql;
-			st.exec();
+			try {
+				st.exec();
+			} catch (std::exception& e) {
+				std::cerr << "Failed: " << alter_table_sql << "\n";
+			}
 		}
 
 		void DbSyncDbMySql::CreateForeignKeyConstraint(const sago::database::DbForeignKeyConstraint& c) {

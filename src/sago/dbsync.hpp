@@ -63,11 +63,13 @@ namespace sago {
 			int scale = 0;
 			bool nullable = false;
 			bool hasDefaultValue = false;
+			bool autoIncrement = false;
 			std::string defaultValue = "";
 
 			template <class Archive>
 			void serialize(Archive & ar) {
-				ar(CEREAL_NVP(name), CEREAL_NVP(type), CEREAL_NVP(length), CEREAL_NVP(scale), CEREAL_NVP(nullable), CEREAL_NVP(hasDefaultValue), CEREAL_NVP(defaultValue));
+				ar(CEREAL_NVP(name), CEREAL_NVP(type), CEREAL_NVP(length), CEREAL_NVP(scale), CEREAL_NVP(nullable), CEREAL_NVP(hasDefaultValue), 
+				CEREAL_NVP(defaultValue), CEREAL_NVP(autoIncrement));
 			}
 
 		};
