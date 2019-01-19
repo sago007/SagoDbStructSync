@@ -34,10 +34,14 @@ namespace sago {
 				db.CreateTable(t);
 			}
 			for (const DbUniqueConstraint& uc : model.unique_constraints) {
-				db.CreateUniqueConstraint(uc);
+				if (!db.UniqueConstraintExists(uc.tablename, uc.name)) {
+					db.CreateUniqueConstraint(uc);
+				}
 			}
 			for (const DbForeignKeyConstraint& fk : model.foreign_keys) {
-				db.CreateForeignKeyConstraint(fk);
+				if (!db.ForeignKeyExists(fk.tablename, fk.name)) {
+					db.CreateForeignKeyConstraint(fk);
+				}
 			}
 		}
 

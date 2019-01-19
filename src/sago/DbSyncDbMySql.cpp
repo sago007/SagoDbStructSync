@@ -307,7 +307,6 @@ namespace sago {
 			if (c.autoIncrement) {
 				alter_table_sql += " AUTO_INCREMENT";
 			}
-			std::cerr << "Failed: " << alter_table_sql << "\n";
 			cppdb::statement st = *sql << alter_table_sql;
 			try {
 				st.exec();
@@ -360,8 +359,12 @@ namespace sago {
 			}
 			alter_table_sql += ")";
 			cppdb::statement st = *sql << alter_table_sql;
-			st.exec();
+			try {
+				st.exec();
+			} catch (std::exception& e) {
+				std::cerr << "Failed: " << alter_table_sql << "\n";
+			}
 		}
 
 	} //namespace database
-} //namespace sago 
+} //namespace sago
