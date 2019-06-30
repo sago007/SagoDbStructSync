@@ -30,12 +30,17 @@
 
 namespace sago {
 	namespace database {
+		//TEXT, NUMBER, DATE, BLOB, CLOB, FLOAT, DOUBLE, NONE
+		static std::string sTEXT = "TEXT";
+		static std::string sNUM = "NUMBER";
+		static std::string sDATE = "DATE";
+		static std::string sBLOB = "BLOB";
+		static std::string sCLOB = "CLOB";
+		static std::string sFLOAT = "FLOAT";
+		static std::string sDOUBLE = "DOUBLE";
+		static std::string sNONE = "NONE";
 
 		const std::string& getTypeAsString(DbType type) {
-			static std::string sTEXT = "TEXT";
-			static std::string sNUM = "NUMBER";
-			static std::string sDATE = "DATE";
-			static std::string sNONE = "NONE";
 			switch (type) {
 				case DbType::NUMBER:
 					return sNUM;
@@ -43,11 +48,30 @@ namespace sago {
 					return sTEXT;
 				case DbType::DATE:
 					return sDATE;
+				case DbType::BLOB:
+					return sBLOB;
+				case DbType::CLOB:
+					return sCLOB;
+				case DbType::FLOAT:
+					return sFLOAT;
+				case DbType::DOUBLE:
+					return sDOUBLE;
 				case DbType::NONE:
 				default:
 					return sNONE;
 			}
 			return sNONE;
+		}
+
+		const DbType getTypeFromString(std::string type) {
+			if (type == sTEXT) return DbType::TEXT;
+			if (type == sNUM) return DbType::NUMBER;
+			if (type == sDATE) return DbType::DATE;
+			if (type == sBLOB) return DbType::BLOB;
+			if (type == sCLOB) return DbType::CLOB;
+			if (type == sFLOAT) return DbType::FLOAT;
+			if (type == sDOUBLE) return DbType::DOUBLE;
+			return DbType::NONE; 
 		}
 
 		void SyncTableDataModel(cppdb::session &sql, const DbTable &table) {

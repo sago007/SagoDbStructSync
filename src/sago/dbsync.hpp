@@ -56,6 +56,27 @@ namespace sago {
 			TEXT, NUMBER, DATE, BLOB, CLOB, FLOAT, DOUBLE, NONE
 		};
 
+		/**
+		 * Converts the enum DbType into the related string
+		 */
+		const std::string& getTypeAsString(DbType type);
+		/**
+		 * Converts a given string into a DbType
+		 * will be "NONE" of no match
+		 */
+		const DbType getTypeFromString(std::string type);
+
+		template <class Archive> std::string save_minimal(Archive const &, DbType const& obj)
+		{
+			return getTypeAsString(obj);
+		}
+
+		template <class Archive> void load_minimal(Archive const &, DbType& obj, std::string const & value)
+		{
+			obj = getTypeFromString(value);
+		}
+
+
 		struct DbColumn {
 			std::string name;
 			DbType type = DbType::NONE;

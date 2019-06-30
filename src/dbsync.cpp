@@ -140,7 +140,7 @@ int main(int argc, const char* argv[]) {
 	if (readInput) {
 		{
 			cereal::JSONInputArchive archive(*input);
-			archive(cereal::make_nvp("dbm", dbm));
+			archive(cereal::make_nvp("databasemodel", dbm));
 		}
 		sago::database::ApplyDataModel(dbm, *dbi);
 	}
@@ -148,7 +148,7 @@ int main(int argc, const char* argv[]) {
 		dbm = sago::database::ExtractDataModel(*dbi);
 		{
 			cereal::JSONOutputArchive archive(*output);
-			archive(cereal::make_nvp("dbm", dbm));
+			archive(cereal::make_nvp("databasemodel", dbm));
 		}
 	}
 	if (commandArguments.validate) {
