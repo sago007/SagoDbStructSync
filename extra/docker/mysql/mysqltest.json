@@ -1,0 +1,37 @@
+{
+    "dbm": {
+        "tables": [
+            {
+                "tablename": "my_movies",
+                "columns": [
+                    {
+                        "name": "movie_id",
+                        "type": "NUMBER",
+                        "length": 20,
+                        "scale": 0,
+                        "nullable": false
+                    },
+                    {
+                        "name": "title",
+                        "type": "TEXT",
+                        "length": 50,
+                        "scale": 0,
+                        "nullable": false,
+                        "hasDefaultValue": false,
+                        "defaultValue": ""
+                    }
+                ]
+            }
+        ],
+        "unique_constraints": [
+            {
+                "name": "PRIMARY",
+                "tablename": "my_movies",
+                "columns": [
+                    "movie_id"
+                ]
+            }
+        ],
+        "foreign_keys": []
+    }
+}

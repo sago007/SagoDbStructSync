@@ -28,11 +28,26 @@
 
 using std::vector;
 
+static std::string getCurrentSchemaName(std::shared_ptr<cppdb::session>& sql) {
+	std::string ret;
+	cppdb::result res = *sql << "SELECT DATABASE()";
+	if (res.next()) {
+		res >> ret;
+	}
+	return ret;
+}
 
 namespace sago {
 	namespace database {
 
-		DbSyncDbMySql::DbSyncDbMySql(std::shared_ptr<cppdb::session>& sql, const std::string& schema) : sql(sql), schema(schema) {
+		DbSyncDbMySql::DbSyncDbMySql(std::shared_ptr<cppdb::session>& sql, const std::string& schema_input) : sql(sql), schema(schema_input) {
+			if (schema.empty()) {
+				schema = getCurrentSchemaName(sql);
+			}
+			if (!SchemaExists(schema)) {
+				std::string errMsg = "Failed to find schema: \""+schema+ "\"";
+				throw std::runtime_error(errMsg.c_str());
+			}
 		}
 
 		DbSyncDbMySql::DbSyncDbMySql(const DbSyncDbMySql& orig) {
@@ -80,6 +95,14 @@ namespace sago {
 			return false;
 		}
 
+		bool DbSyncDbMySql::SchemaExists(const std::string& schemaname) {
+			cppdb::result res = *sql << "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?" << schema;
+			if (res.next()) {
+				return true;
+			}
+			return false;
+		}
+
 		std::vector<std::string> DbSyncDbMySql::GetTableNames() {
 			std::vector<std::string> ret;
 			cppdb::result res = *sql << "SELECT table_name "
@@ -91,6 +114,9 @@ namespace sago {
 				ret.push_back(value);
 			}
 			std::cerr << "Found " << ret.size() << " tables!\n";
+			if (ret.size() == 0) {
+				std::cerr << "Nothing found. Looked in schema: \"" << schema << "\"\n";
+			}
 			return ret;
 		}
 
@@ -148,12 +174,12 @@ namespace sago {
 				res >> name >> data_type >> max_length >> numeric_precision >> numeric_scale >> nullable >> hasDefault >> defaultValue >> extra;
 				ret.name = name;
 				bool type_recognized = false;
+				ret.hasDefaultValue = hasDefault;
+				ret.defaultValue = defaultValue;
 				if (data_type == "int" || data_type == "bigint" || data_type == "decimal") {
 					ret.length = numeric_precision;
 					ret.scale = numeric_scale;
 					ret.type = sago::database::DbType::NUMBER;
-					ret.hasDefaultValue = hasDefault;
-					ret.defaultValue = defaultValue;
 					type_recognized = true;
 				}
 				if (data_type == "varchar" || data_type == "char") {
@@ -171,6 +197,10 @@ namespace sago {
 				}
 				if (data_type == "double") {
 					ret.type = sago::database::DbType::DOUBLE;
+					type_recognized = true;
+				}
+				if (data_type == "timestamp") {
+					ret.type = sago::database::DbType::TIMESTAMP;
 					type_recognized = true;
 				}
 				if (!type_recognized) {
@@ -262,43 +292,48 @@ namespace sago {
 			std::string alter_table_sql = "ALTER TABLE " + tablename + " ADD `" + c.name + "`";
 			switch (c.type) {
 				case sago::database::DbType::NUMBER:
-				{
-					char buffer[200];
-					snprintf(buffer, sizeof (buffer), " NUMERIC(%i,%i) ", c.length, c.scale);
-					if (c.scale == 0) {
-						snprintf(buffer, sizeof (buffer), " INT(%i) ", c.length);
+					{
+						char buffer[200];
+						snprintf(buffer, sizeof (buffer), " NUMERIC(%i,%i) ", c.length, c.scale);
+						if (c.scale == 0) {
+							snprintf(buffer, sizeof (buffer), " INT(%i) ", c.length);
+						}
+						alter_table_sql += buffer;
 					}
-					alter_table_sql += buffer;
-				}
 					break;
 				case sago::database::DbType::TEXT:
-				{
-					char buffer[200];
-					snprintf(buffer, sizeof (buffer), " VARCHAR(%i) ", c.length);
-					alter_table_sql += buffer;
-				}
+					{
+						char buffer[200];
+						snprintf(buffer, sizeof (buffer), " VARCHAR(%i) ", c.length);
+						alter_table_sql += buffer;
+					}
 					break;
 				case sago::database::DbType::DATE:
-				{
-					char buffer[200];
-					snprintf(buffer, sizeof (buffer), " DATETIME ");
-					alter_table_sql += buffer;
-				}
+					{
+						char buffer[200];
+						snprintf(buffer, sizeof (buffer), " DATETIME ");
+						alter_table_sql += buffer;
+					}
 					break;
 				case sago::database::DbType::FLOAT:
-				{
-					alter_table_sql += " FLOAT ";
-				}
+					{
+						alter_table_sql += " FLOAT ";
+					}
 					break;
 				case sago::database::DbType::DOUBLE:
-				{
-					alter_table_sql += " DOUBLE ";
-				}
+					{
+						alter_table_sql += " DOUBLE ";
+					}
+					break;
+				case sago::database::DbType::TIMESTAMP:
+					{
+						alter_table_sql += " TIMESTAMP ";
+					}
 					break;
 				default:
-				{
-					std::cerr << "Type " << static_cast<int> (c.type) << " not supported\n";
-				}
+					{
+						std::cerr << "Type " << static_cast<int> (c.type) << " not supported\n";
+					}
 					break;
 			};
 			if (!c.nullable) {

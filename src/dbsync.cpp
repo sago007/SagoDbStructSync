@@ -121,7 +121,7 @@ int main(int argc, const char* argv[]) {
 			output = &outputFileStream;
 		}
 	}
-	std::string schema_name = "dbsync_test";
+	std::string schema_name = "";
 	if (vm.count("schema")) {
 		schema_name = vm["schema"].as<std::string>();
 	}

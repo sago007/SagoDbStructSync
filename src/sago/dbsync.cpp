@@ -38,6 +38,7 @@ namespace sago {
 		static std::string sCLOB = "CLOB";
 		static std::string sFLOAT = "FLOAT";
 		static std::string sDOUBLE = "DOUBLE";
+		static std::string sTIMESTAMP = "TIMESTAMP";
 		static std::string sNONE = "NONE";
 
 		const std::string& getTypeAsString(DbType type) {
@@ -56,6 +57,8 @@ namespace sago {
 					return sFLOAT;
 				case DbType::DOUBLE:
 					return sDOUBLE;
+				case DbType::TIMESTAMP:
+					return sTIMESTAMP;
 				case DbType::NONE:
 				default:
 					return sNONE;
@@ -71,6 +74,7 @@ namespace sago {
 			if (type == sCLOB) return DbType::CLOB;
 			if (type == sFLOAT) return DbType::FLOAT;
 			if (type == sDOUBLE) return DbType::DOUBLE;
+			if (type == sTIMESTAMP) return DbType::TIMESTAMP;
 			return DbType::NONE; 
 		}
 

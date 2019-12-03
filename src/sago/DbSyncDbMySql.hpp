@@ -44,6 +44,7 @@ namespace sago {
 			virtual bool ColumnExists(const std::string& tablename, const std::string& columnname) override;
 			virtual bool UniqueConstraintExists(const std::string& tablename, const std::string& name) override;
 			virtual bool ForeignKeyExists(const std::string& tablename, const std::string& name) override;
+			virtual bool SchemaExists(const std::string& schemaname) override;
 
 			virtual std::vector<std::string> GetTableNames() override;
 			virtual std::vector<std::string> GetColoumNamesFromTable(const std::string& tablename) override;

@@ -53,7 +53,7 @@ namespace sago {
 		};
 
 		enum class DbType {
-			TEXT, NUMBER, DATE, BLOB, CLOB, FLOAT, DOUBLE, NONE
+			TEXT, NUMBER, DATE, BLOB, CLOB, FLOAT, DOUBLE, TIMESTAMP, NONE
 		};
 
 		/**

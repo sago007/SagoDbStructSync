@@ -51,6 +51,10 @@ namespace sago {
 				return false;
 			}
 
+			virtual bool SchemaExists(const std::string& schemaname) {
+				return false;
+			}
+
 			virtual std::vector<std::string> GetTableNames() {
 				return std::vector<std::string>();
 			}
