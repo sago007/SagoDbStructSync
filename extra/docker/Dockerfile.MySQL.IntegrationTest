@@ -12,4 +12,4 @@ COPY . /staging
 
 RUN cd /staging && cmake . && make
 
-CMD bash /staging/extra/docker/mysql/mysqltest.sh
+RUN bash /staging/extra/docker/mysql/mysqltest.sh
