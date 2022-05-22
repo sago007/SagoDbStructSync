@@ -31,6 +31,7 @@
 #include <fstream>
 #include "sago/DbSyncDbOracle.hpp"
 #include "sago/DbSyncDbMySql.hpp"
+#include "sago/DbSyncDbSqlite.hpp"
 #include "sago/DbSyncValidator.hpp"
 
 using std::cout;
@@ -107,6 +108,10 @@ int main(int argc, const char* argv[]) {
 		std::string inputFileName = vm["input-file"].as<std::string>();
 		if (inputFileName.length() > 0) {
 			inputFileStream.open(inputFileName);
+			if (!inputFileStream.is_open()) {
+				std::cerr << "failed to open: "<< inputFileName << "\n";
+				exit(1);
+			}
 			input = &inputFileStream;
 		}
 	}
@@ -128,8 +133,15 @@ int main(int argc, const char* argv[]) {
 	//std::shared_ptr<cppdb::session> db(new cppdb::session(connectstring));
 	std::shared_ptr<cppdb::session> db = std::make_shared<cppdb::session>(connectstring);
 	std::shared_ptr<sago::database::DbSyncDb> dbi;
-	{
+	std::string database_driver = db->driver();
+	if (database_driver == "mysql") {
 		dbi = std::shared_ptr<sago::database::DbSyncDb>(new sago::database::DbSyncDbMySql(db, schema_name));
+	}
+	else if (database_driver == "sqlite3") {
+		dbi = std::shared_ptr<sago::database::DbSyncDb>(new sago::database::DbSyncDbSqlite(db));
+	}
+	else {
+		throw std::runtime_error((database_driver+" not implemented").c_str());
 	}
 	sago::database::DbDatabaseModel dbm;
 	sago::database::DbSyncValidator validator;
@@ -140,7 +152,12 @@ int main(int argc, const char* argv[]) {
 	if (readInput) {
 		{
 			cereal::JSONInputArchive archive(*input);
-			archive(cereal::make_nvp("databasemodel", dbm));
+			try {
+				archive(cereal::make_nvp("databasemodel", dbm));
+			} catch (std::exception& e) {
+				std::cerr << e.what() << "\n";
+				throw std::runtime_error("failed to find a root element named \"databasemodel\" in json");
+			}
 		}
 		sago::database::ApplyDataModel(dbm, *dbi);
 	}
