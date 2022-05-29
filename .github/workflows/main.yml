@@ -1,0 +1,11 @@
+on: [push]
+
+jobs:
+  ci_job:
+    runs-on: ubuntu-latest
+    name: Test that we compile and the MySQL test is working
+    steps:
+      - name: Check Out Repo
+        uses: actions/checkout@v2
+      - name: Test Linux build using Docker
+        run: docker build . -f extra/docker/Dockerfile.MySQL.IntegrationTest -t sagodbsync_test
