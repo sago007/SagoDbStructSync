@@ -1,5 +1,5 @@
 /*! \file access.hpp
-    \brief Access control, default construction, and serialization disambiguation */
+    \brief Access control and default construction */
 /*
   Copyright (c) 2014, Randolph Voorhies, Shane Grant
   All rights reserved.
@@ -11,14 +11,14 @@
       * Redistributions in binary form must reproduce the above copyright
         notice, this list of conditions and the following disclaimer in the
         documentation and/or other materials provided with the distribution.
-      * Neither the name of cereal nor the
+      * Neither the name of the copyright holder nor the
         names of its contributors may be used to endorse or promote products
         derived from this software without specific prior written permission.
 
   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
   ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
   WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  DISCLAIMED. IN NO EVENT SHALL RANDOLPH VOORHIES OR SHANE GRANT BE LIABLE FOR ANY
+  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY
   DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
   (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
@@ -32,9 +32,11 @@
 #include <type_traits>
 #include <iostream>
 #include <cstdint>
+#include <functional>
 
-#include <cereal/macros.hpp>
-#include <cereal/details/helpers.hpp>
+#include "cereal/macros.hpp"
+#include "cereal/specialize.hpp"
+#include "cereal/details/helpers.hpp"
 
 namespace cereal
 {
@@ -76,6 +78,9 @@ namespace cereal
             ar( x );
             construct( x );
           }
+
+          // if you require versioning, simply add a const std::uint32_t as the final parameter, e.g.:
+          // load_and_construct( Archive & ar, cereal::construct<MyType> & construct, std::uint32_t const version )
         };
       } // end namespace cereal
       @endcode
@@ -85,20 +90,28 @@ namespace cereal
       have the ability to modify the class you wish to serialize, it is recommended that you
       use member serialize functions and a static member load_and_construct function.
 
+      load_and_construct functions, regardless of whether they are static members of your class or
+      whether you create one in the LoadAndConstruct specialization, have the following signature:
+
+      @code{.cpp}
+      // generally Archive will be templated, but it can be specific if desired
+      template <class Archive>
+      static void load_and_construct( Archive & ar, cereal::construct<MyType> & construct );
+      // with an optional last parameter specifying the version: const std::uint32_t version
+      @endcode
+
+      Versioning behaves the same way as it does for standard serialization functions.
+
       @tparam T The type to specialize for
       @ingroup Access */
   template <class T>
   struct LoadAndConstruct
-  {
-    //! Called by cereal if no default constructor exists to load and construct data simultaneously
-    /*! Overloads of this should return a pointer to T and expect an archive as a parameter */
-    static std::false_type load_and_construct(...)
-    { return std::false_type(); }
-  };
+  { };
 
   // forward decl for construct
   //! @cond PRIVATE_NEVERDEFINED
   namespace memory_detail{ template <class Ar, class T> struct LoadAndConstructLoadWrapper; }
+  namespace boost_variant_detail{ template <class Ar, class T> struct LoadAndConstructLoadWrapper; }
   //! @endcond
 
   //! Used to construct types with no default constructor
@@ -191,13 +204,17 @@ namespace cereal
       }
 
     private:
-      template <class A, class B> friend struct ::cereal::memory_detail::LoadAndConstructLoadWrapper;
+      template <class Ar, class TT> friend struct ::cereal::memory_detail::LoadAndConstructLoadWrapper;
+      template <class Ar, class TT> friend struct ::cereal::boost_variant_detail::LoadAndConstructLoadWrapper;
 
-      construct( T * p ) : itsPtr( p ), itsValid( false ) {}
+      construct( T * p ) : itsPtr( p ), itsEnableSharedRestoreFunction( [](){} ), itsValid( false ) {}
+      construct( T * p, std::function<void()> enableSharedFunc ) : // g++4.7 ice with default lambda to std func
+        itsPtr( p ), itsEnableSharedRestoreFunction( enableSharedFunc ), itsValid( false ) {}
       construct( construct const & ) = delete;
       construct & operator=( construct const & ) = delete;
 
       T * itsPtr;
+      std::function<void()> itsEnableSharedRestoreFunction;
       bool itsValid;
   };
 
@@ -309,107 +326,13 @@ namespace cereal
       {
         T::load_and_construct( ar, construct );
       }
-  }; // end class access
 
-  // ######################################################################
-  //! A specifier used in conjunction with cereal::specialize to disambiguate
-  //! serialization in special cases
-  /*! @relates specialize
-      @ingroup Access */
-  enum class specialization
-  {
-    member_serialize,            //!< Force the use of a member serialize function
-    member_load_save,            //!< Force the use of a member load/save pair
-    member_load_save_minimal,    //!< Force the use of a member minimal load/save pair
-    non_member_serialize,        //!< Force the use of a non-member serialize function
-    non_member_load_save,        //!< Force the use of a non-member load/save pair
-    non_member_load_save_minimal //!< Force the use of a non-member minimal load/save pair
-  };
-
-  //! A class used to disambiguate cases where cereal cannot detect a unique way of serializing a class
-  /*! cereal attempts to figure out which method of serialization (member vs. non-member serialize
-      or load/save pair) at compile time.  If for some reason cereal cannot find a non-ambiguous way
-      of serializing a type, it will produce a static assertion complaining about this.
-
-      This can happen because you have both a serialize and load/save pair, or even because a base
-      class has a serialize (public or private with friend access) and a derived class does not
-      overwrite this due to choosing some other serialization type.
-
-      Specializing this class will tell cereal to explicitly use the serialization type you specify
-      and it will not complain about ambiguity in its compile time selection.  However, if cereal detects
-      an ambiguity in specializations, it will continue to issue a static assertion.
-
-      @code{.cpp}
-      class MyParent
+      template<class T, class Archive> inline
+      static auto load_and_construct(Archive & ar, ::cereal::construct<T> & construct, const std::uint32_t version) -> decltype(T::load_and_construct(ar, construct, version))
       {
-        friend class cereal::access;
-        template <class Archive>
-        void serialize( Archive & ar ) {}
-      };
-
-      // Although serialize is private in MyParent, to cereal::access it will look public,
-      // even through MyDerived
-      class MyDerived : public MyParent
-      {
-        public:
-          template <class Archive>
-          void load( Archive & ar ) {}
-
-          template <class Archive>
-          void save( Archive & ar ) {}
-      };
-
-      // The load/save pair in MyDerived is ambiguous because serialize in MyParent can
-      // be accessed from cereal::access.  This looks the same as making serialize public
-      // in MyParent, making it seem as though MyDerived has both a serialize and a load/save pair.
-      // cereal will complain about this at compile time unless we disambiguate:
-
-      namespace cereal
-      {
-        // This struct specialization will tell cereal which is the right way to serialize the ambiguity
-        template <class Archive> struct specialize<Archive, MyDerived, cereal::specialization::member_load_save> {};
-
-        // If we only had a disambiguation for a specific archive type, it would look something like this
-        template <> struct specialize<cereal::BinaryOutputArchive, MyDerived, cereal::specialization::member_load_save> {};
+        T::load_and_construct( ar, construct, version );
       }
-      @endcode
-
-      You can also choose to use the macros CEREAL_SPECIALIZE_FOR_ALL_ARCHIVES or
-      CEREAL_SPECIALIZE_FOR_ARCHIVE if you want to type a little bit less.
-
-      @tparam T The type to specialize the serialization for
-      @tparam S The specialization type to use for T
-      @ingroup Access */
-  template <class Archive, class T, specialization S>
-  struct specialize : public std::false_type {};
-
-  //! Convenient macro for performing specialization for all archive types
-  /*! This performs specialization for the specific type for all types of archives.
-      This macro should be placed at the global namespace.
-
-      @code{cpp}
-      struct MyType {};
-      CEREAL_SPECIALIZE_FOR_ALL_ARCHIVES( MyType, cereal::specialization::member_load_save );
-      @endcode
-
-      @relates specialize
-      @ingroup Access */
-  #define CEREAL_SPECIALIZE_FOR_ALL_ARCHIVES( Type, Specialization )                                \
-  namespace cereal { template <class Archive> struct specialize<Archive, Type, Specialization> {}; }
-
-  //! Convenient macro for performing specialization for a single archive type
-  /*! This performs specialization for the specific type for a single type of archive.
-      This macro should be placed at the global namespace.
-
-      @code{cpp}
-      struct MyType {};
-      CEREAL_SPECIALIZE_FOR_ARCHIVE( cereal::XMLInputArchive, MyType, cereal::specialization::member_load_save );
-      @endcode
-
-      @relates specialize
-      @ingroup Access */
-  #define CEREAL_SPECIALIZE_FOR_ARCHIVE( Archive, Type, Specialization )               \
-  namespace cereal { template <> struct specialize<Archive, Type, Specialization> {}; }
+  }; // end class access
 
   // ######################################################################
   // Deferred Implementation, see construct for more information
@@ -420,6 +343,7 @@ namespace cereal
       throw Exception("Attempting to construct an already initialized object");
 
     ::cereal::access::construct( itsPtr, std::forward<Args>( args )... );
+    itsEnableSharedRestoreFunction();
     itsValid = true;
   }
 } // namespace cereal

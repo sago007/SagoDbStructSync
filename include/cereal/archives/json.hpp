@@ -11,14 +11,14 @@
       * Redistributions in binary form must reproduce the above copyright
         notice, this list of conditions and the following disclaimer in the
         documentation and/or other materials provided with the distribution.
-      * Neither the name of cereal nor the
+      * Neither the name of the copyright holder nor the
         names of its contributors may be used to endorse or promote products
         derived from this software without specific prior written permission.
 
   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
   ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
   WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  DISCLAIMED. IN NO EVENT SHALL RANDOLPH VOORHIES OR SHANE GRANT BE LIABLE FOR ANY
+  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY
   DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
   (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
@@ -29,8 +29,8 @@
 #ifndef CEREAL_ARCHIVES_JSON_HPP_
 #define CEREAL_ARCHIVES_JSON_HPP_
 
-#include <cereal/cereal.hpp>
-#include <cereal/details/util.hpp>
+#include "cereal/cereal.hpp"
+#include "cereal/details/util.hpp"
 
 namespace cereal
 {
@@ -40,17 +40,32 @@ namespace cereal
   { RapidJSONException( const char * what_ ) : Exception( what_ ) {} };
 }
 
+// Inform rapidjson that assert will throw
+#ifndef CEREAL_RAPIDJSON_ASSERT_THROWS
+#define CEREAL_RAPIDJSON_ASSERT_THROWS
+#endif // CEREAL_RAPIDJSON_ASSERT_THROWS
+
 // Override rapidjson assertions to throw exceptions by default
-#ifndef RAPIDJSON_ASSERT
-#define RAPIDJSON_ASSERT(x) if(!(x)){ \
+#ifndef CEREAL_RAPIDJSON_ASSERT
+#define CEREAL_RAPIDJSON_ASSERT(x) if(!(x)){ \
   throw ::cereal::RapidJSONException("rapidjson internal assertion failure: " #x); }
 #endif // RAPIDJSON_ASSERT
 
-#include <cereal/external/rapidjson/prettywriter.h>
-#include <cereal/external/rapidjson/genericstream.h>
-#include <cereal/external/rapidjson/reader.h>
-#include <cereal/external/rapidjson/document.h>
-#include <cereal/external/base64.hpp>
+// Enable support for parsing of nan, inf, -inf
+#ifndef CEREAL_RAPIDJSON_WRITE_DEFAULT_FLAGS
+#define CEREAL_RAPIDJSON_WRITE_DEFAULT_FLAGS kWriteNanAndInfFlag
+#endif
+
+// Enable support for parsing of nan, inf, -inf
+#ifndef CEREAL_RAPIDJSON_PARSE_DEFAULT_FLAGS
+#define CEREAL_RAPIDJSON_PARSE_DEFAULT_FLAGS kParseFullPrecisionFlag | kParseNanAndInfFlag
+#endif
+
+#include "cereal/external/rapidjson/prettywriter.h"
+#include "cereal/external/rapidjson/ostreamwrapper.h"
+#include "cereal/external/rapidjson/istreamwrapper.h"
+#include "cereal/external/rapidjson/document.h"
+#include "cereal/external/base64.hpp"
 
 #include <limits>
 #include <sstream>
@@ -62,10 +77,13 @@ namespace cereal
 {
   // ######################################################################
   //! An output archive designed to save data to JSON
-  /*! This archive uses RapidJSON to build serialie data to JSON.
+  /*! This archive uses RapidJSON to build serialize data to JSON.
 
       JSON archives provides a human readable output but at decreased
       performance (both in time and space) compared to binary archives.
+
+      JSON archives are only guaranteed to finish flushing their contents
+      upon destruction and should thus be used in an RAII fashion.
 
       JSON benefits greatly from name-value pairs, which if present, will
       name the nodes in the output.  If these are not present, each level
@@ -89,8 +107,8 @@ namespace cereal
   {
     enum class NodeType { StartObject, InObject, StartArray, InArray };
 
-    typedef rapidjson::GenericWriteStream WriteStream;
-    typedef rapidjson::PrettyWriter<WriteStream> JSONWriter;
+    using WriteStream = CEREAL_RAPIDJSON_NAMESPACE::OStreamWrapper;
+    using JSONWriter = CEREAL_RAPIDJSON_NAMESPACE::PrettyWriter<WriteStream>;
 
     public:
       /*! @name Common Functionality
@@ -105,7 +123,7 @@ namespace cereal
           static Options Default(){ return Options(); }
 
           //! Default options with no indentation
-          static Options NoIndent(){ return Options( std::numeric_limits<double>::max_digits10, IndentChar::space, 0 ); }
+          static Options NoIndent(){ return Options( JSONWriter::kDefaultMaxDecimalPlaces, IndentChar::space, 0 ); }
 
           //! The character to use for indenting
           enum class IndentChar : char
@@ -121,7 +139,7 @@ namespace cereal
               @param indentChar The type of character to indent with
               @param indentLength The number of indentChar to use for indentation
                              (0 corresponds to no indentation) */
-          explicit Options( int precision = std::numeric_limits<double>::max_digits10,
+          explicit Options( int precision = JSONWriter::kDefaultMaxDecimalPlaces,
                             IndentChar indentChar = IndentChar::space,
                             unsigned int indentLength = 4 ) :
             itsPrecision( precision ),
@@ -142,19 +160,22 @@ namespace cereal
       JSONOutputArchive(std::ostream & stream, Options const & options = Options::Default() ) :
         OutputArchive<JSONOutputArchive>(this),
         itsWriteStream(stream),
-        itsWriter(itsWriteStream, options.itsPrecision),
+        itsWriter(itsWriteStream),
         itsNextName(nullptr)
       {
+        itsWriter.SetMaxDecimalPlaces( options.itsPrecision );
         itsWriter.SetIndent( options.itsIndentChar, options.itsIndentLength );
         itsNameCounter.push(0);
         itsNodeStack.push(NodeType::StartObject);
       }
 
       //! Destructor, flushes the JSON
-      ~JSONOutputArchive()
+      ~JSONOutputArchive() CEREAL_NOEXCEPT
       {
         if (itsNodeStack.top() == NodeType::InObject)
           itsWriter.EndObject();
+        else if (itsNodeStack.top() == NodeType::InArray)
+          itsWriter.EndArray();
       }
 
       //! Saves some binary data, encoded as a base64 string, with an optional name
@@ -199,11 +220,13 @@ namespace cereal
         {
           case NodeType::StartArray:
             itsWriter.StartArray();
+            // fall through
           case NodeType::InArray:
             itsWriter.EndArray();
             break;
           case NodeType::StartObject:
             itsWriter.StartObject();
+            // fall through
           case NodeType::InObject:
             itsWriter.EndObject();
             break;
@@ -220,7 +243,7 @@ namespace cereal
       }
 
       //! Saves a bool to the current node
-      void saveValue(bool b)                { itsWriter.Bool_(b);                                                         }
+      void saveValue(bool b)                { itsWriter.Bool(b);                                                         }
       //! Saves an int to the current node
       void saveValue(int i)                 { itsWriter.Int(i);                                                          }
       //! Saves a uint to the current node
@@ -232,9 +255,11 @@ namespace cereal
       //! Saves a double to the current node
       void saveValue(double d)              { itsWriter.Double(d);                                                       }
       //! Saves a string to the current node
-      void saveValue(std::string const & s) { itsWriter.String(s.c_str(), static_cast<rapidjson::SizeType>( s.size() )); }
+      void saveValue(std::string const & s) { itsWriter.String(s.c_str(), static_cast<CEREAL_RAPIDJSON_NAMESPACE::SizeType>( s.size() )); }
       //! Saves a const char * to the current node
       void saveValue(char const * s)        { itsWriter.String(s);                                                       }
+      //! Saves a nullptr to the current node
+      void saveValue(std::nullptr_t)        { itsWriter.Null();                                                          }
 
     private:
       // Some compilers/OS have difficulty disambiguating the above for various flavors of longs, so we provide
@@ -261,19 +286,19 @@ namespace cereal
       void saveLong(T lu){ saveValue( static_cast<std::uint64_t>( lu ) ); }
 
     public:
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && _MSC_VER < 1916
       //! MSVC only long overload to current node
       void saveValue( unsigned long lu ){ saveLong( lu ); };
 #else // _MSC_VER
       //! Serialize a long if it would not be caught otherwise
       template <class T, traits::EnableIf<std::is_same<T, long>::value,
-                                          !std::is_same<T, std::int32_t>::value,
+                                          !std::is_same<T, int>::value,
                                           !std::is_same<T, std::int64_t>::value> = traits::sfinae> inline
       void saveValue( T t ){ saveLong( t ); }
 
       //! Serialize an unsigned long if it would not be caught otherwise
       template <class T, traits::EnableIf<std::is_same<T, unsigned long>::value,
-                                          !std::is_same<T, std::uint32_t>::value,
+                                          !std::is_same<T, unsigned>::value,
                                           !std::is_same<T, std::uint64_t>::value> = traits::sfinae> inline
       void saveValue( T t ){ saveLong( t ); }
 #endif // _MSC_VER
@@ -357,6 +382,9 @@ namespace cereal
   //! An input archive designed to load data from JSON
   /*! This archive uses RapidJSON to read in a JSON archive.
 
+      As with the output JSON archive, the preferred way to use this archive is in
+      an RAII fashion, ensuring its destruction after all data has been read.
+
       Input JSON should have been produced by the JSONOutputArchive.  Data can
       only be added to dynamically sized containers (marked by JSON arrays) -
       the input archive will determine their size by looking at the number of child nodes.
@@ -391,11 +419,11 @@ namespace cereal
   class JSONInputArchive : public InputArchive<JSONInputArchive>, public traits::TextArchive
   {
     private:
-      typedef rapidjson::GenericReadStream ReadStream;
-      typedef rapidjson::GenericValue<rapidjson::UTF8<>> JSONValue;
+      using ReadStream = CEREAL_RAPIDJSON_NAMESPACE::IStreamWrapper;
+      typedef CEREAL_RAPIDJSON_NAMESPACE::GenericValue<CEREAL_RAPIDJSON_NAMESPACE::UTF8<>> JSONValue;
       typedef JSONValue::ConstMemberIterator MemberIterator;
       typedef JSONValue::ConstValueIterator ValueIterator;
-      typedef rapidjson::Document::GenericValue GenericValue;
+      typedef CEREAL_RAPIDJSON_NAMESPACE::Document::GenericValue GenericValue;
 
     public:
       /*! @name Common Functionality
@@ -409,9 +437,14 @@ namespace cereal
         itsNextName( nullptr ),
         itsReadStream(stream)
       {
-        itsDocument.ParseStream<0>(itsReadStream);
-        itsIteratorStack.emplace_back(itsDocument.MemberBegin(), itsDocument.MemberEnd());
+        itsDocument.ParseStream<>(itsReadStream);
+        if (itsDocument.IsArray())
+          itsIteratorStack.emplace_back(itsDocument.Begin(), itsDocument.End());
+        else
+          itsIteratorStack.emplace_back(itsDocument.MemberBegin(), itsDocument.MemberEnd());
       }
+
+      ~JSONInputArchive() CEREAL_NOEXCEPT = default;
 
       //! Loads some binary data, encoded as a base64 string
       /*! This will automatically start and finish a node to load the data, and can be called directly by
@@ -450,12 +483,18 @@ namespace cereal
           Iterator() : itsIndex( 0 ), itsType(Null_) {}
 
           Iterator(MemberIterator begin, MemberIterator end) :
-            itsMemberItBegin(begin), itsMemberItEnd(end), itsIndex(0), itsType(Member)
-          { }
+            itsMemberItBegin(begin), itsMemberItEnd(end), itsIndex(0), itsSize(std::distance(begin, end)), itsType(Member)
+          {
+            if( itsSize == 0 )
+              itsType = Null_;
+          }
 
           Iterator(ValueIterator begin, ValueIterator end) :
-            itsValueItBegin(begin), itsValueItEnd(end), itsIndex(0), itsType(Value)
-          { }
+            itsValueItBegin(begin), itsIndex(0), itsSize(std::distance(begin, end)), itsType(Value)
+          {
+            if( itsSize == 0 )
+              itsType = Null_;
+          }
 
           //! Advance to the next node
           Iterator & operator++()
@@ -467,11 +506,14 @@ namespace cereal
           //! Get the value of the current node
           GenericValue const & value()
           {
+            if( itsIndex >= itsSize )
+              throw cereal::Exception("No more objects in input");
+
             switch(itsType)
             {
               case Value : return itsValueItBegin[itsIndex];
               case Member: return itsMemberItBegin[itsIndex].value;
-              default: throw cereal::Exception("Invalid Iterator Type!");
+              default: throw cereal::Exception("JSONInputArchive internal error: null or empty iterator to object or array!");
             }
           }
 
@@ -501,14 +543,14 @@ namespace cereal
               }
             }
 
-            throw Exception("JSON Parsing failed - provided NVP not found");
+            throw Exception("JSON Parsing failed - provided NVP (" + std::string(searchName) + ") not found");
           }
 
         private:
           MemberIterator itsMemberItBegin, itsMemberItEnd; //!< The member iterator (object)
-          ValueIterator itsValueItBegin, itsValueItEnd;    //!< The value iterator (array)
-          size_t itsIndex;                                 //!< The current index of this iterator
-          enum Type {Value, Member, Null_} itsType;    //!< Whether this holds values (array) or members (objects) or nothing
+          ValueIterator itsValueItBegin;                   //!< The value iterator (array)
+          size_t itsIndex, itsSize;                        //!< The current index of this iterator
+          enum Type {Value, Member, Null_} itsType;        //!< Whether this holds values (array) or members (objects) or nothing
       };
 
       //! Searches for the expectedName node if it doesn't match the actualName
@@ -522,18 +564,20 @@ namespace cereal
           @throws Exception if an expectedName is given and not found */
       inline void search()
       {
+        // store pointer to itsNextName locally and reset to nullptr in case search() throws
+        auto localNextName = itsNextName;
+        itsNextName = nullptr;
+
         // The name an NVP provided with setNextName()
-        if( itsNextName )
+        if( localNextName )
         {
           // The actual name of the current node
           auto const actualName = itsIteratorStack.back().name();
 
           // Do a search if we don't see a name coming up, or if the names don't match
-          if( !actualName || std::strcmp( itsNextName, actualName ) != 0 )
-            itsIteratorStack.back().search( itsNextName );
+          if( !actualName || std::strcmp( localNextName, actualName ) != 0 )
+            itsIteratorStack.back().search( localNextName );
         }
-
-        itsNextName = nullptr;
       }
 
     public:
@@ -601,9 +645,9 @@ namespace cereal
       }
 
       //! Loads a value from the current node - bool overload
-      void loadValue(bool & val)        { search(); val = itsIteratorStack.back().value().GetBool_();   ++itsIteratorStack.back(); }
+      void loadValue(bool & val)        { search(); val = itsIteratorStack.back().value().GetBool(); ++itsIteratorStack.back(); }
       //! Loads a value from the current node - int64 overload
-      void loadValue(int64_t & val)     { search(); val = itsIteratorStack.back().value().GetInt64();  ++itsIteratorStack.back(); }
+      void loadValue(int64_t & val)     { search(); val = itsIteratorStack.back().value().GetInt64(); ++itsIteratorStack.back(); }
       //! Loads a value from the current node - uint64 overload
       void loadValue(uint64_t & val)    { search(); val = itsIteratorStack.back().value().GetUint64(); ++itsIteratorStack.back(); }
       //! Loads a value from the current node - float overload
@@ -612,6 +656,8 @@ namespace cereal
       void loadValue(double & val)      { search(); val = itsIteratorStack.back().value().GetDouble(); ++itsIteratorStack.back(); }
       //! Loads a value from the current node - string overload
       void loadValue(std::string & val) { search(); val = itsIteratorStack.back().value().GetString(); ++itsIteratorStack.back(); }
+      //! Loads a nullptr from the current node
+      void loadValue(std::nullptr_t&)   { search(); CEREAL_RAPIDJSON_ASSERT(itsIteratorStack.back().value().IsNull()); ++itsIteratorStack.back(); }
 
       // Special cases to handle various flavors of long, which tend to conflict with
       // the int32_t or int64_t on various compiler/OS combinations.  MSVC doesn't need any of this.
@@ -636,19 +682,19 @@ namespace cereal
       template <class T> inline
       typename std::enable_if<sizeof(T) == sizeof(std::uint64_t) && !std::is_signed<T>::value, void>::type
       loadLong(T & lu){ loadValue( reinterpret_cast<std::uint64_t&>( lu ) ); }
-            
+
     public:
       //! Serialize a long if it would not be caught otherwise
       template <class T> inline
       typename std::enable_if<std::is_same<T, long>::value &&
-                              !std::is_same<T, std::int32_t>::value &&
+                              sizeof(T) >= sizeof(std::int64_t) &&
                               !std::is_same<T, std::int64_t>::value, void>::type
       loadValue( T & t ){ loadLong(t); }
 
       //! Serialize an unsigned long if it would not be caught otherwise
       template <class T> inline
       typename std::enable_if<std::is_same<T, unsigned long>::value &&
-                              !std::is_same<T, std::uint32_t>::value &&
+                              sizeof(T) >= sizeof(std::uint64_t) &&
                               !std::is_same<T, std::uint64_t>::value, void>::type
       loadValue( T & t ){ loadLong(t); }
       #endif // _MSC_VER
@@ -679,7 +725,10 @@ namespace cereal
       //! Loads the size for a SizeTag
       void loadSize(size_type & size)
       {
-        size = (itsIteratorStack.rbegin() + 1)->value().Size();
+        if (itsIteratorStack.size() == 1)
+          size = itsDocument.Size();
+        else
+          size = (itsIteratorStack.rbegin() + 1)->value().Size();
       }
 
       //! @}
@@ -688,7 +737,7 @@ namespace cereal
       const char * itsNextName;               //!< Next name set by NVP
       ReadStream itsReadStream;               //!< Rapidjson write stream
       std::vector<Iterator> itsIteratorStack; //!< 'Stack' of rapidJSON iterators
-      rapidjson::Document itsDocument;        //!< Rapidjson document
+      CEREAL_RAPIDJSON_NAMESPACE::Document itsDocument; //!< Rapidjson document
   };
 
   // ######################################################################
@@ -718,6 +767,31 @@ namespace cereal
   /*! NVPs do not start or finish nodes - they just set up the names */
   template <class T> inline
   void epilogue( JSONInputArchive &, NameValuePair<T> const & )
+  { }
+
+  // ######################################################################
+  //! Prologue for deferred data for JSON archives
+  /*! Do nothing for the defer wrapper */
+  template <class T> inline
+  void prologue( JSONOutputArchive &, DeferredData<T> const & )
+  { }
+
+  //! Prologue for deferred data for JSON archives
+  template <class T> inline
+  void prologue( JSONInputArchive &, DeferredData<T> const & )
+  { }
+
+  // ######################################################################
+  //! Epilogue for deferred for JSON archives
+  /*! NVPs do not start or finish nodes - they just set up the names */
+  template <class T> inline
+  void epilogue( JSONOutputArchive &, DeferredData<T> const & )
+  { }
+
+  //! Epilogue for deferred for JSON archives
+  /*! Do nothing for the defer wrapper */
+  template <class T> inline
+  void epilogue( JSONInputArchive &, DeferredData<T> const & )
   { }
 
   // ######################################################################
@@ -753,44 +827,68 @@ namespace cereal
       that may be given data by the type about to be archived
 
       Minimal types do not start or finish nodes */
-  template <class T, traits::DisableIf<std::is_arithmetic<T>::value ||
-                                       traits::has_minimal_base_class_serialization<T, traits::has_minimal_output_serialization, JSONOutputArchive>::value ||
-                                       traits::has_minimal_output_serialization<T, JSONOutputArchive>::value> = traits::sfinae>
+  template <class T, traits::EnableIf<!std::is_arithmetic<T>::value,
+                                      !traits::has_minimal_base_class_serialization<T, traits::has_minimal_output_serialization, JSONOutputArchive>::value,
+                                      !traits::has_minimal_output_serialization<T, JSONOutputArchive>::value> = traits::sfinae>
   inline void prologue( JSONOutputArchive & ar, T const & )
   {
     ar.startNode();
   }
 
   //! Prologue for all other types for JSON archives
-  template <class T, traits::DisableIf<std::is_arithmetic<T>::value ||
-                                       traits::has_minimal_base_class_serialization<T, traits::has_minimal_input_serialization, JSONInputArchive>::value ||
-                                       traits::has_minimal_input_serialization<T, JSONInputArchive>::value> = traits::sfinae>
+  template <class T, traits::EnableIf<!std::is_arithmetic<T>::value,
+                                      !traits::has_minimal_base_class_serialization<T, traits::has_minimal_input_serialization, JSONInputArchive>::value,
+                                      !traits::has_minimal_input_serialization<T, JSONInputArchive>::value> = traits::sfinae>
   inline void prologue( JSONInputArchive & ar, T const & )
   {
     ar.startNode();
   }
 
   // ######################################################################
-  //! Epilogue for all other types other for JSON archives (except minimal types
+  //! Epilogue for all other types other for JSON archives (except minimal types)
   /*! Finishes the node created in the prologue
 
       Minimal types do not start or finish nodes */
-  template <class T, traits::DisableIf<std::is_arithmetic<T>::value ||
-                                       traits::has_minimal_base_class_serialization<T, traits::has_minimal_output_serialization, JSONOutputArchive>::value ||
-                                       traits::has_minimal_output_serialization<T, JSONOutputArchive>::value> = traits::sfinae>
+  template <class T, traits::EnableIf<!std::is_arithmetic<T>::value,
+                                      !traits::has_minimal_base_class_serialization<T, traits::has_minimal_output_serialization, JSONOutputArchive>::value,
+                                      !traits::has_minimal_output_serialization<T, JSONOutputArchive>::value> = traits::sfinae>
   inline void epilogue( JSONOutputArchive & ar, T const & )
   {
     ar.finishNode();
   }
 
   //! Epilogue for all other types other for JSON archives
-  template <class T, traits::DisableIf<std::is_arithmetic<T>::value ||
-                                       traits::has_minimal_base_class_serialization<T, traits::has_minimal_input_serialization, JSONInputArchive>::value ||
-                                       traits::has_minimal_input_serialization<T, JSONInputArchive>::value> = traits::sfinae>
+  template <class T, traits::EnableIf<!std::is_arithmetic<T>::value,
+                                      !traits::has_minimal_base_class_serialization<T, traits::has_minimal_input_serialization, JSONInputArchive>::value,
+                                      !traits::has_minimal_input_serialization<T, JSONInputArchive>::value> = traits::sfinae>
   inline void epilogue( JSONInputArchive & ar, T const & )
   {
     ar.finishNode();
   }
+
+  // ######################################################################
+  //! Prologue for arithmetic types for JSON archives
+  inline
+  void prologue( JSONOutputArchive & ar, std::nullptr_t const & )
+  {
+    ar.writeName();
+  }
+
+  //! Prologue for arithmetic types for JSON archives
+  inline
+  void prologue( JSONInputArchive &, std::nullptr_t const & )
+  { }
+
+  // ######################################################################
+  //! Epilogue for arithmetic types for JSON archives
+  inline
+  void epilogue( JSONOutputArchive &, std::nullptr_t const & )
+  { }
+
+  //! Epilogue for arithmetic types for JSON archives
+  inline
+  void epilogue( JSONInputArchive &, std::nullptr_t const & )
+  { }
 
   // ######################################################################
   //! Prologue for arithmetic types for JSON archives
@@ -856,6 +954,20 @@ namespace cereal
   {
     ar.setNextName( t.name );
     ar( t.value );
+  }
+
+  //! Saving for nullptr to JSON
+  inline
+  void CEREAL_SAVE_FUNCTION_NAME(JSONOutputArchive & ar, std::nullptr_t const & t)
+  {
+    ar.saveValue( t );
+  }
+
+  //! Loading arithmetic from JSON
+  inline
+  void CEREAL_LOAD_FUNCTION_NAME(JSONInputArchive & ar, std::nullptr_t & t)
+  {
+    ar.loadValue( t );
   }
 
   //! Saving for arithmetic to JSON

@@ -11,14 +11,14 @@
       * Redistributions in binary form must reproduce the above copyright
         notice, this list of conditions and the following disclaimer in the
         documentation and/or other materials provided with the distribution.
-      * Neither the name of cereal nor the
+      * Neither the name of the copyright holder nor the
         names of its contributors may be used to endorse or promote products
         derived from this software without specific prior written permission.
 
   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
   ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
   WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  DISCLAIMED. IN NO EVENT SHALL RANDOLPH VOORHIES OR SHANE GRANT BE LIABLE FOR ANY
+  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY
   DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
   (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
@@ -28,12 +28,12 @@
 */
 #ifndef CEREAL_ARCHIVES_XML_HPP_
 #define CEREAL_ARCHIVES_XML_HPP_
-#include <cereal/cereal.hpp>
-#include <cereal/details/util.hpp>
+#include "cereal/cereal.hpp"
+#include "cereal/details/util.hpp"
 
-#include <cereal/external/rapidxml/rapidxml.hpp>
-#include <cereal/external/rapidxml/rapidxml_print.hpp>
-#include <cereal/external/base64.hpp>
+#include "cereal/external/rapidxml/rapidxml.hpp"
+#include "cereal/external/rapidxml/rapidxml_print.hpp"
+#include "cereal/external/base64.hpp"
 
 #include <sstream>
 #include <stack>
@@ -68,7 +68,7 @@ namespace cereal
   //! An output archive designed to save data to XML
   /*! This archive uses RapidXML to build an in memory XML tree of the
       data it serializes before outputting it to its stream upon destruction.
-      The envisioned way of using this archive is in an RAII fashion, letting
+      This archive should be used in an RAII fashion, letting
       the automatic destruction of the object cause the flush to its stream.
 
       XML archives provides a human readable output but at decreased
@@ -101,31 +101,58 @@ namespace cereal
       //! @{
 
       //! A class containing various advanced options for the XML archive
+      /*! Options can either be directly passed to the constructor, or chained using the
+          modifier functions for an interface analogous to named parameters */
       class Options
       {
         public:
           //! Default options
           static Options Default(){ return Options(); }
 
-          //! Default options with no indentation
-          static Options NoIndent(){ return Options( std::numeric_limits<double>::max_digits10, false ); }
-
           //! Specify specific options for the XMLOutputArchive
-          /*! @param precision The precision used for floating point numbers
-              @param indent Whether to indent each line of XML
-              @param outputType Whether to output the type of each serialized object as an attribute */
-          explicit Options( int precision = std::numeric_limits<double>::max_digits10,
-                            bool indent = true,
-                            bool outputType = false ) :
-            itsPrecision( precision ),
-            itsIndent( indent ),
-            itsOutputType( outputType ) { }
+          /*! @param precision_ The precision used for floating point numbers
+              @param indent_ Whether to indent each line of XML
+              @param outputType_ Whether to output the type of each serialized object as an attribute
+              @param sizeAttributes_ Whether dynamically sized containers output the size=dynamic attribute */
+          explicit Options( int precision_ = std::numeric_limits<double>::max_digits10,
+                            bool indent_ = true,
+                            bool outputType_ = false,
+                            bool sizeAttributes_ = true ) :
+            itsPrecision( precision_ ),
+            itsIndent( indent_ ),
+            itsOutputType( outputType_ ),
+            itsSizeAttributes( sizeAttributes_ )
+          { }
+
+          /*! @name Option Modifiers
+              An interface for setting option settings analogous to named parameters.
+
+              @code{cpp}
+              cereal::XMLOutputArchive ar( myStream,
+                                           cereal::XMLOutputArchive::Options()
+                                           .indent(true)
+                                           .sizeAttributes(false) );
+              @endcode
+              */
+          //! @{
+
+          //! Sets the precision used for floaing point numbers
+          Options & precision( int value ){ itsPrecision = value; return * this; }
+          //! Whether to indent each line of XML
+          Options & indent( bool enable ){ itsIndent = enable; return *this; }
+          //! Whether to output the type of each serialized object as an attribute
+          Options & outputType( bool enable ){ itsOutputType = enable; return *this; }
+          //! Whether dynamically sized containers (e.g. vector) output the size=dynamic attribute
+          Options & sizeAttributes( bool enable ){ itsSizeAttributes = enable; return *this; }
+
+          //! @}
 
         private:
           friend class XMLOutputArchive;
           int itsPrecision;
           bool itsIndent;
           bool itsOutputType;
+          bool itsSizeAttributes;
       };
 
       //! Construct, outputting to the provided stream upon destruction
@@ -137,7 +164,8 @@ namespace cereal
         OutputArchive<XMLOutputArchive>(this),
         itsStream(stream),
         itsOutputType( options.itsOutputType ),
-        itsIndent( options.itsIndent )
+        itsIndent( options.itsIndent ),
+        itsSizeAttributes(options.itsSizeAttributes)
       {
         // rapidxml will delete all allocations when xml_document is cleared
         auto node = itsXML.allocate_node( rapidxml::node_declaration );
@@ -158,7 +186,7 @@ namespace cereal
       }
 
       //! Destructor, flushes the XML
-      ~XMLOutputArchive()
+      ~XMLOutputArchive() CEREAL_NOEXCEPT
       {
         const int flags = itsIndent ? 0x0 : rapidxml::print_no_indenting;
         rapidxml::print( itsStream, itsXML, flags );
@@ -182,7 +210,7 @@ namespace cereal
           itsNodes.top().node->append_attribute( itsXML.allocate_attribute( "type", "cereal binary data" ) );
 
         finishNode();
-      };
+      }
 
       //! @}
       /*! @name Internal Functionality
@@ -232,19 +260,22 @@ namespace cereal
         itsOS.clear(); itsOS.seekp( 0, std::ios::beg );
         itsOS << value << std::ends;
 
-        const auto strValue = itsOS.str();
+        auto strValue = itsOS.str();
+
+        // itsOS.str() may contain data from previous calls after the first '\0' that was just inserted
+        // and this data is counted in the length call. We make sure to remove that section so that the
+        // whitespace validation is done properly
+        strValue.resize(std::strlen(strValue.c_str()));
 
         // If the first or last character is a whitespace, add xml:space attribute
-        // the string always contains a '\0' added by std::ends, so the last character is at len-2 and an 'empty' 
-        // string has a length of 1 or lower
         const auto len = strValue.length();
-        if ( len > 1 && ( xml_detail::isWhitespace( strValue[0] ) || xml_detail::isWhitespace( strValue[len - 2] ) ) )
+        if ( len > 0 && ( xml_detail::isWhitespace( strValue[0] ) || xml_detail::isWhitespace( strValue[len - 1] ) ) )
         {
           itsNodes.top().node->append_attribute( itsXML.allocate_attribute( "xml:space", "preserve" ) );
         }
 
         // allocate strings for all of the data in the XML object
-        auto dataPtr = itsXML.allocate_string( itsOS.str().c_str(), itsOS.str().length() + 1 );
+        auto dataPtr = itsXML.allocate_string(strValue.c_str(), strValue.length() + 1 );
 
         // insert into the XML
         itsNodes.top().node->append_node( itsXML.allocate_node( rapidxml::node_data, nullptr, dataPtr ) );
@@ -285,6 +316,8 @@ namespace cereal
         auto valuePtr = itsXML.allocate_string( value );
         itsNodes.top().node->append_attribute( itsXML.allocate_attribute( namePtr, valuePtr ) );
       }
+
+      bool hasSizeAttributes() const { return itsSizeAttributes; }
 
     protected:
       //! A struct that contains metadata about a node
@@ -327,12 +360,16 @@ namespace cereal
       std::ostringstream itsOS;        //!< Used to format strings internally
       bool itsOutputType;              //!< Controls whether type information is printed
       bool itsIndent;                  //!< Controls whether indenting is used
+      bool itsSizeAttributes;          //!< Controls whether lists have a size attribute
   }; // XMLOutputArchive
 
   // ######################################################################
   //! An output archive designed to load data from XML
   /*! This archive uses RapidXML to build an in memory XML tree of the
       data in the stream it is given before loading any types serialized.
+
+      As with the output XML archive, the preferred way to use this archive is in
+      an RAII fashion, ensuring its destruction after all data has been read.
 
       Input XML should have been produced by the XMLOutputArchive.  Data can
       only be added to dynamically sized containers - the input archive will
@@ -406,6 +443,8 @@ namespace cereal
           itsNodes.emplace( root );
       }
 
+      ~XMLInputArchive() CEREAL_NOEXCEPT = default;
+
       //! Loads some binary data, encoded as a base64 string, optionally specified by some name
       /*! This will automatically start and finish a node to load the data, and can be called directly by
           users.
@@ -428,7 +467,7 @@ namespace cereal
         std::memcpy( data, decoded.data(), decoded.size() );
 
         finishNode();
-      };
+      }
 
       //! @}
       /*! @name Internal Functionality
@@ -459,7 +498,7 @@ namespace cereal
           next = itsNodes.top().search( expectedName );
 
           if( next == nullptr )
-            throw Exception("XML Parsing failed - provided NVP not found");
+            throw Exception("XML Parsing failed - provided NVP (" + std::string(expectedName) + ") not found");
         }
 
         itsNodes.emplace( next );
@@ -482,7 +521,7 @@ namespace cereal
       //! will return @c nullptr if the node does not have a name
       const char * getNodeName() const
       {
-        return itsNodes.top().node->name();
+        return itsNodes.top().getChildName();
       }
 
       //! Sets the name for the next node created with startNode
@@ -525,6 +564,7 @@ namespace cereal
       //! Loads a type best represented as an unsigned long from the current top node
       template <class T, traits::EnableIf<std::is_unsigned<T>::value,
                                           !std::is_same<T, bool>::value,
+                                          !std::is_same<T, char>::value,
                                           !std::is_same<T, unsigned char>::value,
                                           sizeof(T) < sizeof(long long)> = traits::sfinae> inline
       void loadValue( T & value )
@@ -701,10 +741,16 @@ namespace cereal
           return nullptr;
         }
 
+        //! Returns the actual name of the next child node, if it exists
+        const char * getChildName() const
+        {
+          return child ? child->name() : nullptr;
+        }
+
         rapidxml::xml_node<> * node;  //!< A pointer to this node
         rapidxml::xml_node<> * child; //!< A pointer to its current child
         size_t size;                  //!< The remaining number of children for this node
-        const char * name;            //!< The NVP name for next next child node
+        const char * name;            //!< The NVP name for next child node
       }; // NodeInfo
 
       //! @}
@@ -744,12 +790,40 @@ namespace cereal
   { }
 
   // ######################################################################
+  //! Prologue for deferred data for XML archives
+  /*! Do nothing for the defer wrapper */
+  template <class T> inline
+  void prologue( XMLOutputArchive &, DeferredData<T> const & )
+  { }
+
+  //! Prologue for deferred data for XML archives
+  template <class T> inline
+  void prologue( XMLInputArchive &, DeferredData<T> const & )
+  { }
+
+  // ######################################################################
+  //! Epilogue for deferred for XML archives
+  /*! NVPs do not start or finish nodes - they just set up the names */
+  template <class T> inline
+  void epilogue( XMLOutputArchive &, DeferredData<T> const & )
+  { }
+
+  //! Epilogue for deferred for XML archives
+  /*! Do nothing for the defer wrapper */
+  template <class T> inline
+  void epilogue( XMLInputArchive &, DeferredData<T> const & )
+  { }
+
+  // ######################################################################
   //! Prologue for SizeTags for XML output archives
   /*! SizeTags do not start or finish nodes */
   template <class T> inline
   void prologue( XMLOutputArchive & ar, SizeTag<T> const & )
   {
-    ar.appendAttribute( "size", "dynamic" );
+      if (ar.hasSizeAttributes())
+      {
+          ar.appendAttribute("size", "dynamic");
+      }
   }
 
   template <class T> inline
