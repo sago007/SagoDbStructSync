@@ -41,43 +41,6 @@ namespace sago {
 		static std::string sTIMESTAMP = "TIMESTAMP";
 		static std::string sNONE = "NONE";
 
-		const std::string& getTypeAsString(DbType type) {
-			switch (type) {
-				case DbType::NUMBER:
-					return sNUM;
-				case DbType::TEXT:
-					return sTEXT;
-				case DbType::DATE:
-					return sDATE;
-				case DbType::BLOB:
-					return sBLOB;
-				case DbType::CLOB:
-					return sCLOB;
-				case DbType::FLOAT:
-					return sFLOAT;
-				case DbType::DOUBLE:
-					return sDOUBLE;
-				case DbType::TIMESTAMP:
-					return sTIMESTAMP;
-				case DbType::NONE:
-				default:
-					return sNONE;
-			}
-			return sNONE;
-		}
-
-		const DbType getTypeFromString(std::string type) {
-			if (type == sTEXT) return DbType::TEXT;
-			if (type == sNUM) return DbType::NUMBER;
-			if (type == sDATE) return DbType::DATE;
-			if (type == sBLOB) return DbType::BLOB;
-			if (type == sCLOB) return DbType::CLOB;
-			if (type == sFLOAT) return DbType::FLOAT;
-			if (type == sDOUBLE) return DbType::DOUBLE;
-			if (type == sTIMESTAMP) return DbType::TIMESTAMP;
-			return DbType::NONE; 
-		}
-
 		void SyncTableDataModel(cppdb::session &sql, const DbTable &table) {
 			std::string stsql = "CREATE TABLE IF NOT EXISTS " + table.tablename + "(";
 			for (size_t i = 0; i < table.columns.size(); i++) {

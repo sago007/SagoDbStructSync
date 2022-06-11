@@ -32,7 +32,6 @@
 #include "../src/sago/dbsync.hpp"
 #include "../src/sago/dbsync_db.hpp"
 #include "../src/sago/DbSyncDbMySql.hpp"
-#include <cereal/archives/json.hpp>
 
 using std::string;
 using std::cout;
@@ -45,19 +44,6 @@ static void PrintVector(const std::vector<std::string>& v) {
 	}
 }
 
-static void PrintColumn(const sago::database::DbColumn& c) {
-	{
-		cereal::JSONOutputArchive archive(cout);
-		archive(cereal::make_nvp("c", c));
-	}
-}
-
-static void PrintTable(const sago::database::DbTable& t) {
-	{
-		cereal::JSONOutputArchive archive(cout);
-		archive(cereal::make_nvp("table", t));
-	}
-}
 
 /*
  This test just ensures that the thing actually compiles. 
@@ -74,13 +60,9 @@ BOOST_AUTO_TEST_CASE(It_can_connect) {
 	t.tablename = "MyTable";
 	sago::database::DbColumn c;
 	c.name = "name";
-	c.type = sago::database::DbType::TEXT;
+	c.type = SagoDbType::TEXT;
 	c.length = 50;
 	t.columns.push_back(c);
-	{
-		cereal::JSONOutputArchive archive(cout);
-		archive(cereal::make_nvp("total", t));
-	}
 
 	cout << "\n";
 	cout << "SOME_TABLE: " << dbi->TableExists("SOME_TABLE") << "\n";
@@ -94,9 +76,5 @@ BOOST_AUTO_TEST_CASE(It_can_connect) {
 	PrintVector(dbi->GetUniqueConstraintNamesForTable("my_test_table"));
 	cout << "Foreign keys: \n";
 	PrintVector(dbi->GetForeignKeyNamesForTable("my_test_table"));
-	cout << "Column:\n";
-	PrintColumn(dbi->GetColumn("my_test_table", "name"));
-	cout << "Table:\n";
-	PrintTable(dbi->GetTable("my_test_table"));
 	cout << "\n\n";
 }

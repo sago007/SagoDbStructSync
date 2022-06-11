@@ -29,9 +29,11 @@
 
 #include <cppdb/frontend.h>
 #include <vector>
-#include "cereal/cereal.hpp"
-#include "cereal/types/vector.hpp"
-#include "cereal/types/string.hpp"
+#include "json_struct.h"
+#include <iostream>
+
+JS_ENUM(SagoDbType, TEXT, NUMBER, DATE, BLOB, CLOB, FLOAT, DOUBLE, TIMESTAMP, NONE);
+JS_ENUM_DECLARE_STRING_PARSER(SagoDbType);
 
 namespace sago {
 	namespace database {
@@ -52,34 +54,10 @@ namespace sago {
 			}
 		};
 
-		enum class DbType {
-			TEXT, NUMBER, DATE, BLOB, CLOB, FLOAT, DOUBLE, TIMESTAMP, NONE
-		};
-
-		/**
-		 * Converts the enum DbType into the related string
-		 */
-		const std::string& getTypeAsString(DbType type);
-		/**
-		 * Converts a given string into a DbType
-		 * will be "NONE" of no match
-		 */
-		const DbType getTypeFromString(std::string type);
-
-		template <class Archive> std::string save_minimal(Archive const &, DbType const& obj)
-		{
-			return getTypeAsString(obj);
-		}
-
-		template <class Archive> void load_minimal(Archive const &, DbType& obj, std::string const & value)
-		{
-			obj = getTypeFromString(value);
-		}
-
 
 		struct DbColumn {
 			std::string name;
-			DbType type = DbType::NONE;
+			SagoDbType type = SagoDbType::NONE;
 			int length = 0; //< Text length or number precision
 			int scale = 0;
 			bool nullable = false;
@@ -87,22 +65,14 @@ namespace sago {
 			bool autoIncrement = false;
 			std::string defaultValue = "";
 
-			template <class Archive>
-			void serialize(Archive & ar) {
-				ar(CEREAL_NVP(name), CEREAL_NVP(type), CEREAL_NVP(length), CEREAL_NVP(scale), CEREAL_NVP(nullable), CEREAL_NVP(hasDefaultValue), 
-				CEREAL_NVP(defaultValue), CEREAL_NVP(autoIncrement));
-			}
-
+			JS_OBJ(name, type, length, scale,nullable, hasDefaultValue,defaultValue, autoIncrement);
 		};
 
 		struct DbTable {
 			std::string tablename;
 			std::vector<DbColumn> columns;
 
-			template <class Archive>
-			void serialize(Archive & ar) {
-				ar(CEREAL_NVP(tablename), CEREAL_NVP(columns));
-			}
+			JS_OBJ(tablename, columns);
 		};
 
 		struct DbUniqueConstraint {
@@ -110,10 +80,7 @@ namespace sago {
 			std::string tablename;
 			std::vector<std::string> columns;
 
-			template <class Archive>
-			void serialize(Archive & ar) {
-				ar(CEREAL_NVP(name), CEREAL_NVP(tablename), CEREAL_NVP(columns));
-			}
+			JS_OBJ(name, tablename, columns);
 		};
 
 		struct DbForeignKeyConstraint {
@@ -123,10 +90,7 @@ namespace sago {
 			std::string foreigntablename;
 			std::vector<std::string> foreigntablecolumnnames;
 
-			template <class Archive>
-			void serialize(Archive & ar) {
-				ar(CEREAL_NVP(name), CEREAL_NVP(tablename), CEREAL_NVP(columnnames), CEREAL_NVP(foreigntablename), CEREAL_NVP(foreigntablecolumnnames));
-			}
+			JS_OBJ(name, tablename, columnnames, foreigntablename, foreigntablecolumnnames);
 		};
 
 		struct DbDatabaseModel {
@@ -134,10 +98,7 @@ namespace sago {
 			std::vector<DbUniqueConstraint> unique_constraints;
 			std::vector<DbForeignKeyConstraint> foreign_keys;
 
-			template <class Archive>
-			void serialize(Archive & ar) {
-				ar(CEREAL_NVP(tables), CEREAL_NVP(unique_constraints), CEREAL_NVP(foreign_keys));
-			}
+			JS_OBJ(tables, unique_constraints, foreign_keys);
 		};
 
 

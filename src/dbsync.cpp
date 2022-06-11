@@ -27,7 +27,6 @@
 #include <iostream>
 #include <boost/program_options.hpp>
 #include "sago/dbsync.hpp"
-#include <cereal/archives/json.hpp>
 #include <fstream>
 #include "sago/DbSyncDbOracle.hpp"
 #include "sago/DbSyncDbMySql.hpp"
@@ -151,9 +150,10 @@ int main(int argc, const char* argv[]) {
 	}
 	if (readInput) {
 		{
-			cereal::JSONInputArchive archive(*input);
+			std::string s(std::istreambuf_iterator<char>(*input), {});
+			JS::ParseContext context(s);
 			try {
-				archive(cereal::make_nvp("databasemodel", dbm));
+				context.parseTo(dbm);
 			} catch (std::exception& e) {
 				std::cerr << e.what() << "\n";
 				throw std::runtime_error("failed to find a root element named \"databasemodel\" in json");
@@ -164,8 +164,8 @@ int main(int argc, const char* argv[]) {
 	if (writeOutput) {
 		dbm = sago::database::ExtractDataModel(*dbi);
 		{
-			cereal::JSONOutputArchive archive(*output);
-			archive(cereal::make_nvp("databasemodel", dbm));
+			std::string pretty_json = JS::serializeStruct(dbm);
+			*output << pretty_json;
 		}
 	}
 	if (commandArguments.validate) {

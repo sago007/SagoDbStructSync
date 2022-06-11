@@ -179,28 +179,28 @@ namespace sago {
 				if (data_type == "int" || data_type == "bigint" || data_type == "decimal") {
 					ret.length = numeric_precision;
 					ret.scale = numeric_scale;
-					ret.type = sago::database::DbType::NUMBER;
+					ret.type = SagoDbType::NUMBER;
 					type_recognized = true;
 				}
 				if (data_type == "varchar" || data_type == "char") {
 					ret.length = max_length;
-					ret.type = sago::database::DbType::TEXT;
+					ret.type = SagoDbType::TEXT;
 					type_recognized = true;
 				}
 				if (data_type == "datetime") {
-					ret.type = sago::database::DbType::DATE;
+					ret.type = SagoDbType::DATE;
 					type_recognized = true;
 				}
 				if (data_type == "float") {
-					ret.type = sago::database::DbType::FLOAT;
+					ret.type = SagoDbType::FLOAT;
 					type_recognized = true;
 				}
 				if (data_type == "double") {
-					ret.type = sago::database::DbType::DOUBLE;
+					ret.type = SagoDbType::DOUBLE;
 					type_recognized = true;
 				}
 				if (data_type == "timestamp") {
-					ret.type = sago::database::DbType::TIMESTAMP;
+					ret.type = SagoDbType::TIMESTAMP;
 					type_recognized = true;
 				}
 				if (!type_recognized) {
@@ -291,7 +291,7 @@ namespace sago {
 		void DbSyncDbMySql::CreateColumn(const std::string& tablename, const sago::database::DbColumn& c) {
 			std::string alter_table_sql = "ALTER TABLE " + tablename + " ADD `" + c.name + "`";
 			switch (c.type) {
-				case sago::database::DbType::NUMBER:
+				case SagoDbType::NUMBER:
 					{
 						char buffer[200];
 						snprintf(buffer, sizeof (buffer), " NUMERIC(%i,%i) ", c.length, c.scale);
@@ -301,31 +301,31 @@ namespace sago {
 						alter_table_sql += buffer;
 					}
 					break;
-				case sago::database::DbType::TEXT:
+				case SagoDbType::TEXT:
 					{
 						char buffer[200];
 						snprintf(buffer, sizeof (buffer), " VARCHAR(%i) ", c.length);
 						alter_table_sql += buffer;
 					}
 					break;
-				case sago::database::DbType::DATE:
+				case SagoDbType::DATE:
 					{
 						char buffer[200];
 						snprintf(buffer, sizeof (buffer), " DATETIME ");
 						alter_table_sql += buffer;
 					}
 					break;
-				case sago::database::DbType::FLOAT:
+				case SagoDbType::FLOAT:
 					{
 						alter_table_sql += " FLOAT ";
 					}
 					break;
-				case sago::database::DbType::DOUBLE:
+				case SagoDbType::DOUBLE:
 					{
 						alter_table_sql += " DOUBLE ";
 					}
 					break;
-				case sago::database::DbType::TIMESTAMP:
+				case SagoDbType::TIMESTAMP:
 					{
 						alter_table_sql += " TIMESTAMP ";
 					}
