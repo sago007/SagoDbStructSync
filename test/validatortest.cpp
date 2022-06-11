@@ -31,7 +31,6 @@
 #include <boost/test/unit_test.hpp>
 #include "../src/sago/dbsync.hpp"
 #include "../src/sago/DbSyncValidator.hpp"
-#include <cereal/archives/json.hpp>
 
 
 BOOST_AUTO_TEST_CASE(Validate_Name) {
