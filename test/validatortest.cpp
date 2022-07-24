@@ -33,20 +33,41 @@
 #include "../src/sago/DbSyncValidator.hpp"
 
 
-BOOST_AUTO_TEST_CASE(Validate_Name) {
+BOOST_AUTO_TEST_CASE(Validate_Name_Success) {
 	sago::database::DbSyncValidator validator;
 	//Valid name
 	validator.ValidateName("MyTable", "/path/to/error");
-	
+}
+
+
+BOOST_AUTO_TEST_CASE(Validate_Name_Underscore_Success) {
+	sago::database::DbSyncValidator validator;
 	//Valid name with lower case, upper case, number and underscore
 	validator.ValidateName("My_Table5", "/path/to/error");
-	
+}
+
+BOOST_AUTO_TEST_CASE(Validate_Name_NumberFail) {
+	sago::database::DbSyncValidator validator;
 	//Name may not start with a number
 	BOOST_CHECK_THROW(validator.ValidateName("1MyTable", "/path/to/error"), sago::database::DbValidationException);
-	
+}
+
+BOOST_AUTO_TEST_CASE(Validate_Name_DotFail) {
+	sago::database::DbSyncValidator validator;
 	//Illigal char "."
 	BOOST_CHECK_THROW(validator.ValidateName("my.table", "/path/to/error"), sago::database::DbValidationException);
-	
+}
+
+BOOST_AUTO_TEST_CASE(Validate_Name_LengthFail) {
+	sago::database::DbSyncValidator validator;
+	validator.checkNamesLength = true;
 	//Too long for some databases (Oracle)
 	BOOST_CHECK_THROW(validator.ValidateName("A_TABLE_THAT_IS_WAY_TO_LONG_TO_FIT_IN_DATABASES_WITH_A_30_CHARS_LIMIT", "/path/to/error"), sago::database::DbValidationException);
+}
+
+BOOST_AUTO_TEST_CASE(Validate_Name_LengthIgnore) {
+	sago::database::DbSyncValidator validator;
+	validator.checkNamesLength = false;
+	//Too long for some databases (Oracle)
+	validator.ValidateName("A_TABLE_THAT_IS_WAY_TO_LONG_TO_FIT_IN_DATABASES_WITH_A_30_CHARS_LIMIT", "/path/to/error");
 }

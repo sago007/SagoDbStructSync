@@ -43,4 +43,8 @@ BOOST_AUTO_TEST_CASE(It_compiles) {
 	c.type = SagoDbType::TEXT;
 	c.length = 50;
 	t.columns.push_back(c);
+  {
+    std::string pretty_json = JS::serializeStruct(t);
+    std::cerr << pretty_json << "\n";
+	}
 }
