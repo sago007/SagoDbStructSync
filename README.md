@@ -13,7 +13,7 @@ SagoDbStructSync is my attempt to create a small program/library that for trivia
 
 ```
 {
-    "dbm": {
+    "databasemodel": {
         "tables": [
             {
                 "tablename": "my_movies",

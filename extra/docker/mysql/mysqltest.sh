@@ -34,6 +34,15 @@ mysql --database=testdb2 -e "SELECT COLUMN_NAME,DATA_TYPE,CHARACTER_MAXIMUM_LENG
 				FROM INFORMATION_SCHEMA.COLUMNS
 				WHERE table_schema = 'testdb2' AND TABLE_NAME = 'tasks'"
 
+mysql -e "create database testdb3"
+
+echo "Testing standard json file."
+./dbsync -i "/staging/extra/docker/mysql/mysqltest.json" --connectstring "mysql:user=root;database=testdb3"
+
+mysql --database=testdb3 -e "SELECT COLUMN_NAME,DATA_TYPE,CHARACTER_MAXIMUM_LENGTH,NUMERIC_PRECISION,NUMERIC_SCALE,IS_NULLABLE,COLUMN_DEFAULT IS NOT NULL,COLUMN_DEFAULT,EXTRA
+				FROM INFORMATION_SCHEMA.COLUMNS
+				WHERE table_schema = 'testdb3' AND TABLE_NAME = 'my_movies'"
+
 echo "Shutting down MySQL"
 # Tell the MySQL daemon to shutdown.
 mysqladmin shutdown

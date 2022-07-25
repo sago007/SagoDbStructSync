@@ -142,7 +142,7 @@ int main(int argc, const char* argv[]) {
 	else {
 		throw std::runtime_error((database_driver+" not implemented").c_str());
 	}
-	sago::database::DbDatabaseModel dbm;
+	sago::database::DbDatabaseRoot dbm;
 	sago::database::DbSyncValidator validator;
 	if (commandArguments.validateLength) {
 		validator.nameMaxLength = commandArguments.validateLength;
@@ -159,17 +159,17 @@ int main(int argc, const char* argv[]) {
 				throw std::runtime_error("failed to find a root element named \"databasemodel\" in json");
 			}
 		}
-		sago::database::ApplyDataModel(dbm, *dbi);
+		sago::database::ApplyDataModel(dbm.databasemodel, *dbi);
 	}
 	if (writeOutput) {
-		dbm = sago::database::ExtractDataModel(*dbi);
+		dbm.databasemodel = sago::database::ExtractDataModel(*dbi);
 		{
 			std::string pretty_json = JS::serializeStruct(dbm);
 			*output << pretty_json;
 		}
 	}
 	if (commandArguments.validate) {
-		validator.ValidateModel(dbm);
+		validator.ValidateModel(dbm.databasemodel);
 	}
 	return 0;
 }

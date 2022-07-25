@@ -101,6 +101,12 @@ namespace sago {
 			JS_OBJ(tables, unique_constraints, foreign_keys);
 		};
 
+		struct DbDatabaseRoot {
+			DbDatabaseModel databasemodel;
+
+			JS_OBJ(databasemodel);
+		};
+
 
 		void SyncTableDataModel(cppdb::session &sql, const DbTable &table);
 
