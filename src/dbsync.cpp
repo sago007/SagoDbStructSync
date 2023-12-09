@@ -30,6 +30,7 @@
 #include <fstream>
 #include "sago/DbSyncDbOracle.hpp"
 #include "sago/DbSyncDbMySql.hpp"
+#include "sago/DbSyncDbPostgres.hpp"
 #include "sago/DbSyncDbSqlite.hpp"
 #include "sago/DbSyncValidator.hpp"
 
@@ -138,6 +139,9 @@ int main(int argc, const char* argv[]) {
 	}
 	else if (database_driver == "sqlite3") {
 		dbi = std::shared_ptr<sago::database::DbSyncDb>(new sago::database::DbSyncDbSqlite(db));
+	}
+	else if (database_driver == "postgresql") {
+		dbi = std::shared_ptr<sago::database::DbSyncDb>(new sago::database::DbSyncDbPostgres(db, schema_name));
 	}
 	else {
 		throw std::runtime_error((database_driver+" not implemented").c_str());
