@@ -146,7 +146,7 @@ namespace sago {
 		std::vector<std::string> DbSyncDbPostgres::GetForeignKeyNamesForTable(const std::string& tablename) {
 			std::vector<std::string> ret;
 			cppdb::result res = *sql << "SELECT CONSTRAINT_NAME "
-				"FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = ? AND TABLE_NAME = ?" << schema << tablename;
+				"FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE constraint_type = 'FOREIGN KEY' AND CONSTRAINT_SCHEMA = ? AND TABLE_NAME = ?" << schema << tablename;
 			while (res.next()) {
 				std::string value;
 				res >> value;
@@ -264,7 +264,8 @@ namespace sago {
 				res >> value;
 				remove_all_substrings(value,"{");
 				remove_all_substrings(value,"}");
-				remove_all_substrings(value,"\\\"");
+				remove_all_substrings(value,"\"");
+				remove_all_substrings(value," ");
 				std::stringstream ss (value);
 				std::string item;
 
