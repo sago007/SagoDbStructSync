@@ -45,7 +45,7 @@ namespace sago {
 			virtual bool SchemaExists(const std::string& schemaname) override;
 
 			virtual void CreateTable(const sago::database::DbTable& t) override;
-
+			virtual void CreateColumn(const std::string& tablename, const sago::database::DbColumn& c) override;
 			virtual void CreateUniqueConstraint(const sago::database::DbUniqueConstraint& c) override;
 		private:
 			std::shared_ptr<cppdb::session> sql;

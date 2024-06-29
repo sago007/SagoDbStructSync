@@ -63,7 +63,7 @@ namespace sago {
 		}
 
 		bool DbSyncDbSqlite::ForeignKeyExists(const std::string& tablename, const std::string& name) {
-			cppdb::result res = *sql << "PRAGMA foreign_key_list(" << tablename << ");";
+			cppdb::result res = *sql << "PRAGMA foreign_key_list(" + tablename + ");";
 			while (res.next()) {
 				std::string indexname;
 				res >> indexname;
@@ -79,19 +79,28 @@ namespace sago {
 		}
 
 		bool DbSyncDbSqlite::ColumnExists(const std::string& tablename, const std::string& columnname) {
-			cppdb::result res = *sql << "PRAGMA table_info(" << tablename << ");";
-			while (res.next()) {
-				std::string name;
-				res >> name;
-				if (name == columnname) {
-					return true;
+			try {
+				cppdb::result res = *sql << "PRAGMA table_info(" + tablename + ")";
+				while (res.next()) {
+					std::string name;
+					name = res.get<std::string>("name");
+					if (name == columnname) {
+						return true;
+					}
 				}
+				return false;
+			} catch (std::exception& e) {
+				throw DbException(e.what(), "DbSyncDbSqlite::ColumnExists failed", columnname, tablename);
 			}
-			return false;
 		}
 
 		void DbSyncDbSqlite::CreateTable(const sago::database::DbTable& t) {
 			if (TableExists(t.tablename)) {
+				for (const sago::database::DbColumn& c : t.columns) {
+					if (!ColumnExists(t.tablename, c.name)) {
+						CreateColumn(t.tablename, c);
+					}
+				}
 				return;
 			}
 			std::string sqlStr = "CREATE TABLE " + t.tablename + " (";
@@ -142,8 +151,66 @@ namespace sago {
 			}
 		}
 
+		void DbSyncDbSqlite::CreateColumn(const std::string& tablename, const sago::database::DbColumn& c) {
+			if (ColumnExists(tablename, c.name)) {
+				return;
+			}
+			std::string sqlStr = "ALTER TABLE " + tablename + " ADD COLUMN " + c.name + " ";
+			switch (c.type) {
+			case SagoDbType::TEXT:
+				sqlStr += "TEXT";
+				break;
+			case SagoDbType::NUMBER:
+				sqlStr += "DOUBLE";
+				break;
+			case SagoDbType::DATE:
+				sqlStr += "DATE";
+				break;
+			case SagoDbType::BLOB:
+				sqlStr += "BLOB";
+				break;
+			case SagoDbType::CLOB:
+				sqlStr += "CLOB";
+				break;
+			case SagoDbType::FLOAT:
+				sqlStr += "FLOAT";
+				break;
+			case SagoDbType::DOUBLE:
+				sqlStr += "DOUBLE";
+				break;
+			case SagoDbType::TIMESTAMP:
+				sqlStr += "TIMESTAMP";
+				break;
+			case SagoDbType::NONE:
+				throw DbException("DbSyncDbSqlite::CreateColumn", "Column type is NONE", c.name, tablename);
+			}
+			sqlStr += ";";
+			std::cout << sqlStr << std::endl;
+			cppdb::statement st = *sql << sqlStr;
+			try {
+				st.exec();
+			} catch (std::exception& e) {
+				std::cerr << "Failed: " << sqlStr << "\n";
+				throw;
+			}
+		}
+
+		static bool str_starts_with(const std::string& str, const std::string& prefix) {
+			if (str.length() < prefix.length()) {
+				return false;
+			}
+			return str.substr(0, prefix.length()) == prefix;
+		}
+
 		void DbSyncDbSqlite::CreateUniqueConstraint(const sago::database::DbUniqueConstraint& c) {
-			std::string sqlStr = "CREATE UNIQUE INDEX " + c.name + " ON " + c.tablename + " (";
+			std::string indexName = c.name;
+			if ( !str_starts_with(indexName, c.tablename + "_") ){
+				indexName = c.tablename + "_" + indexName;
+			}
+			if (UniqueConstraintExists(c.tablename, indexName)) {
+				return;
+			}
+			std::string sqlStr = "CREATE UNIQUE INDEX " + indexName + " ON " + c.tablename + " (";
 			bool first = true;
 			for (const auto& col : c.columns) {
 				if (!first) {
