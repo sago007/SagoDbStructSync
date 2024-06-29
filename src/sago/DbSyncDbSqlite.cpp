@@ -46,5 +46,122 @@ namespace sago {
 			return false;
 		}
 
+		bool DbSyncDbSqlite::UniqueConstraintExists(const std::string& tablename, const std::string& name) {
+			try {
+				cppdb::result res = *sql << "SELECT name FROM sqlite_master WHERE type= 'index' and tbl_name = ? and name = ?;" << tablename << name;
+				while (res.next()) {
+					std::string indexname;
+					res >> indexname;
+					if (indexname == name) {
+						return true;
+					}
+				}
+				return false;
+			} catch (std::exception& e) {
+				throw DbException(e.what(), "DbSyncDbSqlite::UniqueConstraintExists failed", name, tablename);
+			}
+		}
+
+		bool DbSyncDbSqlite::ForeignKeyExists(const std::string& tablename, const std::string& name) {
+			cppdb::result res = *sql << "PRAGMA foreign_key_list(" << tablename << ");";
+			while (res.next()) {
+				std::string indexname;
+				res >> indexname;
+				if (indexname == name) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		bool DbSyncDbSqlite::SchemaExists(const std::string& schemaname) {
+			return false;
+		}
+
+		bool DbSyncDbSqlite::ColumnExists(const std::string& tablename, const std::string& columnname) {
+			cppdb::result res = *sql << "PRAGMA table_info(" << tablename << ");";
+			while (res.next()) {
+				std::string name;
+				res >> name;
+				if (name == columnname) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		void DbSyncDbSqlite::CreateTable(const sago::database::DbTable& t) {
+			if (TableExists(t.tablename)) {
+				return;
+			}
+			std::string sqlStr = "CREATE TABLE " + t.tablename + " (";
+			bool first = true;
+			for (const auto& col : t.columns) {
+				if (!first) {
+					sqlStr += ", ";
+				}
+				first = false;
+				sqlStr += col.name + " ";
+				switch (col.type) {
+				case SagoDbType::TEXT:
+					sqlStr += "TEXT";
+					break;
+				case SagoDbType::NUMBER:
+					sqlStr += "DOUBLE";
+					break;
+				case SagoDbType::DATE:
+					sqlStr += "DATE";
+					break;
+				case SagoDbType::BLOB:
+					sqlStr += "BLOB";
+					break;
+				case SagoDbType::CLOB:
+					sqlStr += "CLOB";
+					break;
+				case SagoDbType::FLOAT:
+					sqlStr += "FLOAT";
+					break;
+				case SagoDbType::DOUBLE:
+					sqlStr += "DOUBLE";
+					break;
+				case SagoDbType::TIMESTAMP:
+					sqlStr += "TIMESTAMP";
+					break;
+				case SagoDbType::NONE:
+					throw DbException("DbSyncDbSqlite::CreateTable", "Column type is NONE", col.name, t.tablename);
+				}
+			}
+			sqlStr += ");";
+			std::cout << sqlStr << std::endl;
+			cppdb::statement st = *sql << sqlStr;
+			try {
+				st.exec();
+			} catch (std::exception& e) {
+				std::cerr << "Failed: " << sqlStr << "\n";
+				throw;
+			}
+		}
+
+		void DbSyncDbSqlite::CreateUniqueConstraint(const sago::database::DbUniqueConstraint& c) {
+			std::string sqlStr = "CREATE UNIQUE INDEX " + c.name + " ON " + c.tablename + " (";
+			bool first = true;
+			for (const auto& col : c.columns) {
+				if (!first) {
+					sqlStr += ", ";
+				}
+				first = false;
+				sqlStr += col;
+			}
+			sqlStr += ");";
+			std::cout << sqlStr << std::endl;
+			cppdb::statement st = *sql << sqlStr;
+			try {
+				st.exec();
+			} catch (std::exception& e) {
+				std::cerr << "Failed: " << sqlStr << "\n";
+				throw;
+			}
+		}
+
 	} //namespace database
 } //namespace sago

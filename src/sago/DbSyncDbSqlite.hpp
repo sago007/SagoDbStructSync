@@ -39,6 +39,14 @@ namespace sago {
 			virtual ~DbSyncDbSqlite();
 
 			virtual bool TableExists(const std::string& tablename) override;
+			virtual bool ColumnExists(const std::string& tablename, const std::string& columnname) override;
+			virtual bool UniqueConstraintExists(const std::string& tablename, const std::string& name) override;
+			virtual bool ForeignKeyExists(const std::string& tablename, const std::string& name) override;
+			virtual bool SchemaExists(const std::string& schemaname) override;
+
+			virtual void CreateTable(const sago::database::DbTable& t) override;
+
+			virtual void CreateUniqueConstraint(const sago::database::DbUniqueConstraint& c) override;
 		private:
 			std::shared_ptr<cppdb::session> sql;
 		};
