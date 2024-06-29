@@ -18,33 +18,13 @@ SagoDbStructSync is my attempt to create a small program/library that for trivia
             {
                 "tablename": "my_movies",
                 "columns": [
-                    {
-                        "name": "movie_id",
-                        "type": "NUMBER",
-                        "length": 20,
-                        "scale": 0,
-                        "nullable": false
-                    },
-                    {
-                        "name": "title",
-                        "type": "TEXT",
-                        "length": 50,
-                        "scale": 0,
-                        "nullable": false,
-                        "hasDefaultValue": false,
-                        "defaultValue": ""
-                    }
+                    { "name": "movie_id", "type": "NUMBER", "length": 20, "scale": 0, "nullable": false },
+                    { "name": "title", "type": "TEXT", "length": 50, "scale": 0, "nullable": false }
                 ]
             }
         ],
         "unique_constraints": [
-            {
-                "name": "PRIMARY",
-                "tablename": "my_movies",
-                "columns": [
-                    "movie_id"
-                ]
-            }
+            { "name": "PRIMARY", "tablename": "my_movies", "columns": [ "movie_id" ] }
         ],
         "foreign_keys": []
     }
