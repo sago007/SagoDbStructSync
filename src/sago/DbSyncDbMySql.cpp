@@ -267,7 +267,7 @@ namespace sago {
 			return ret;
 		}
 
-		void DbSyncDbMySql::CreateTable(const sago::database::DbTable& t) {
+		void DbSyncDbMySql::CreateTable(const sago::database::DbTable& t, const std::vector<DbForeignKeyConstraint>& foreign_keys) {
 			if (!TableExists(t.tablename)) {
 				std::string create_table_sql = "CREATE TABLE " + schema + "." + t.tablename + " ( " + this->sago_id + " INT(20) NOT NULL AUTO_INCREMENT UNIQUE )";
 				for (const sago::database::DbColumn& c : t.columns) {

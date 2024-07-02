@@ -87,7 +87,12 @@ namespace sago {
 				return DbForeignKeyConstraint();
 			}
 
-			virtual void CreateTable(const DbTable& t) {
+			/**
+			 * Create a table in the database
+			 * @param t The table to create
+			 * @param foreign_keys All the foreign keys in the database. The list might contain foreign keys that are not for this table.
+			*/
+			virtual void CreateTable(const DbTable& t, const std::vector<DbForeignKeyConstraint>& foreign_keys) {
 				throw DbException("Not implemented", "CreateTable not implemented", t.tablename, "");
 			}
 

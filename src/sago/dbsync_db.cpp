@@ -31,7 +31,7 @@ namespace sago {
 
 		void ApplyDataModel(const DbDatabaseModel& model, DbSyncDb& db) {
 			for (const DbTable& t : model.tables) {
-				db.CreateTable(t);
+				db.CreateTable(t, model.foreign_keys);
 			}
 			for (const DbUniqueConstraint& uc : model.unique_constraints) {
 				if (!db.UniqueConstraintExists(uc.tablename, uc.name)) {

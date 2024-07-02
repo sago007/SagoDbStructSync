@@ -94,7 +94,7 @@ namespace sago {
 			}
 		}
 
-		void DbSyncDbSqlite::CreateTable(const sago::database::DbTable& t) {
+		void DbSyncDbSqlite::CreateTable(const sago::database::DbTable& t, const std::vector<DbForeignKeyConstraint>& foreign_keys) {
 			if (TableExists(t.tablename)) {
 				for (const sago::database::DbColumn& c : t.columns) {
 					if (!ColumnExists(t.tablename, c.name)) {
@@ -139,6 +139,30 @@ namespace sago {
 				case SagoDbType::NONE:
 					throw DbException("DbSyncDbSqlite::CreateTable", "Column type is NONE", col.name, t.tablename);
 				}
+			}
+			for (const auto& fk : foreign_keys) {
+				if (fk.tablename != t.tablename) {
+					continue;
+				}
+				sqlStr += ", FOREIGN KEY(";
+				first = true;
+				for (const auto& col : fk.columnnames) {
+					if (!first) {
+						sqlStr += ", ";
+					}
+					first = false;
+					sqlStr += col;
+				}
+				sqlStr += ") REFERENCES " + fk.foreigntablename + "(";
+				first = true;
+				for (const auto& col : fk.foreigntablecolumnnames) {
+					if (!first) {
+						sqlStr += ", ";
+					}
+					first = false;
+					sqlStr += col;
+				}
+				sqlStr += ")";
 			}
 			sqlStr += ");";
 			std::cout << sqlStr << std::endl;
@@ -228,6 +252,10 @@ namespace sago {
 				std::cerr << "Failed: " << sqlStr << "\n";
 				throw;
 			}
+		}
+
+		void DbSyncDbSqlite::CreateForeignKeyConstraint(const sago::database::DbForeignKeyConstraint& c) {
+			std::cerr << "Warning: FK " << c.name << " on table " << c.tablename << " cannot be automatically validated. SQLite does not support named FKs.\n";
 		}
 
 	} //namespace database

@@ -49,7 +49,7 @@ namespace sago {
 			bool checkNamesCase = true;
 			bool checkNamesChars = true;
 			bool checkNamesLength = false;
-			int nameMaxLength = 30;
+			int nameMaxLength = 100;
 		private:
 			std::string schemaNameBeingValidated = "";
 			void ValidateDuplicates();
