@@ -39,7 +39,7 @@ using std::vector;
 
 struct CommandArguments {
 	bool validate = true;
-	int validateLength = 30;
+	int validateLength = 100;
 };
 
 #ifndef VERSIONNUMBER
