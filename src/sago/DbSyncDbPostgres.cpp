@@ -78,7 +78,7 @@ namespace sago {
 		bool DbSyncDbPostgres::UniqueConstraintExists(const std::string& tablename, const std::string& name) {
 			cppdb::result res = *sql << "SELECT CONSTRAINT_NAME "
 				"FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE CONSTRAINT_TYPE IN ('PRIMARY KEY', 'UNIQUE') "
-				"AND constraint_schema = ? AND TABLE_NAME=? AND CONSTRAINT_NAME = ?" << schema << tablename << name;
+				"AND constraint_schema = ? AND TABLE_NAME=lower(?) AND CONSTRAINT_NAME = lower(?)" << schema << tablename << name;
 			if (res.next()) {
 				return true;
 			}
