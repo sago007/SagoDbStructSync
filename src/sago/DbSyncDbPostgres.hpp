@@ -62,7 +62,7 @@ namespace sago {
 			virtual void CreateForeignKeyConstraint(const sago::database::DbForeignKeyConstraint& c) override;
 		private:
 			std::shared_ptr<cppdb::session> sql;
-			std::string schema;
+			std::string schema = "public";
 			std::string sago_id = "SAGO_ID";
 			std::string sago_prefix = "SAGO_";
 

@@ -310,16 +310,16 @@ namespace sago {
 
 		void DbSyncDbPostgres::CreateTable(const sago::database::DbTable& t, const std::vector<DbForeignKeyConstraint>& foreign_keys) {
 			if (!TableExists(t.tablename)) {
-				std::string create_table_sql = "CREATE TABLE " + t.tablename + " ( " + this->sago_id + " INT(20) NOT NULL AUTO_INCREMENT UNIQUE )";
+				std::string create_table_sql = "CREATE TABLE " + schema + "." + t.tablename + " ( " + this->sago_id + " SERIAL PRIMARY KEY )";
 				for (const sago::database::DbColumn& c : t.columns) {
 					if (c.autoIncrement) {
-						//MySQL is limited to one auto increment coloumn, so if we have one then use that.
-						create_table_sql = "CREATE TABLE " + t.tablename + " ( " + c.name + " INT(20) NOT NULL AUTO_INCREMENT UNIQUE )";
+						// PostgreSQL allows only one SERIAL column per table, so if we have one, use that.
+						create_table_sql = "CREATE TABLE " + schema + "." +  t.tablename + " ( " + c.name + " SERIAL PRIMARY KEY )";
 					}
 				}
 				cppdb::statement st = *sql << create_table_sql;
 				st.exec();
-				std::cerr << "Created it \n";
+				std::cerr << "Created table: " << schema << "." << t.tablename << "\n";
 			}
 			for (const sago::database::DbColumn& c : t.columns) {
 				if (!ColumnExists(t.tablename, c.name)) {
@@ -330,15 +330,15 @@ namespace sago {
 		}
 
 		void DbSyncDbPostgres::CreateColumn(const std::string& tablename, const sago::database::DbColumn& c) {
-			std::string alter_table_sql = "ALTER TABLE " + tablename + " ADD `" + c.name + "`";
+			std::string alter_table_sql = "ALTER TABLE " + schema + "." + tablename + " ADD \"" + c.name + "\"";
 			switch (c.type) {
 				case SagoDbType::NUMBER:
 					{
 						char buffer[200];
 						snprintf(buffer, sizeof (buffer), " NUMERIC(%i,%i) ", c.length, c.scale);
-						if (c.scale == 0) {
-							snprintf(buffer, sizeof (buffer), " INT(%i) ", c.length);
-						}
+						/*if (c.scale == 0) {
+							snprintf(buffer, sizeof (buffer), " INTEGER(%i) ", c.length);
+						}*/
 						alter_table_sql += buffer;
 					}
 					break;
@@ -401,7 +401,7 @@ namespace sago {
 			if (c.name == "PRIMARY") {
 				keyname_plus_type = "PRIMARY KEY";
 			}
-			std::string alter_table_sql = "ALTER TABLE " + c.tablename + " ADD CONSTRAINT " + keyname_plus_type + " ( " + c.columns.at(0);
+			std::string alter_table_sql = "ALTER TABLE " + schema + "." + c.tablename + " ADD CONSTRAINT " + keyname_plus_type + " ( " + c.columns.at(0);
 			for (size_t i = 1; i < c.columns.size(); ++i) {
 				alter_table_sql += ", " + c.columns.at(i);
 			}
@@ -425,11 +425,11 @@ namespace sago {
 					c.columnnames.size() << " vs " << c.foreigntablecolumnnames.size() << "\n";
 				return;
 			}
-			std::string alter_table_sql = "ALTER TABLE " + c.tablename + " ADD CONSTRAINT " + c.name + " FOREIGN KEY ( " + c.columnnames.at(0);
+			std::string alter_table_sql = "ALTER TABLE " + schema + "." + c.tablename + " ADD CONSTRAINT " + c.name + " FOREIGN KEY ( " + c.columnnames.at(0);
 			for (size_t i = 1; i < c.columnnames.size(); ++i) {
 				alter_table_sql += ", " + c.columnnames.at(i);
 			}
-			alter_table_sql += " ) REFERENCES " + c.foreigntablename + " ( " + c.foreigntablecolumnnames.at(0);
+			alter_table_sql += " ) REFERENCES " + schema + "." + c.foreigntablename + " ( " + c.foreigntablecolumnnames.at(0);
 			for (size_t i = 1; i < c.foreigntablecolumnnames.size(); ++i) {
 				alter_table_sql += ", " + c.foreigntablecolumnnames.at(i);
 			}
