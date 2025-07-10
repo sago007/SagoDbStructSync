@@ -87,7 +87,7 @@ namespace sago {
 
 		bool DbSyncDbPostgres::ForeignKeyExists(const std::string& tablename, const std::string& name) {
 			cppdb::result res = *sql << "SELECT CONSTRAINT_NAME "
-				"FROM information_schema.table_constraints tco WHERE constraint_schema = ? AND table_name = ? AND constraint_type = 'FOREIGN KEY' AND constraint_name = ?" << schema << tablename << name;
+				"FROM information_schema.table_constraints tco WHERE constraint_schema = ? AND table_name = lower(?) AND constraint_type = 'FOREIGN KEY' AND constraint_name = lower(?)" << schema << tablename << name;
 			if (res.next()) {
 				return true;
 			}
