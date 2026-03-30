@@ -9,6 +9,9 @@ CONNECT="postgresql:dbname=testdb;user=postgres;password=testpass;host=postgres"
 export PGPASSWORD="testpass"
 PSQL_CMD="psql -h postgres -U postgres -d testdb -t -A"
 
+echo "--- Cleanup: dropping test_table if it exists ---"
+$PSQL_CMD -c "DROP TABLE IF EXISTS test_table"
+
 assert_eq() {
     local description="$1"
     local expected="$2"

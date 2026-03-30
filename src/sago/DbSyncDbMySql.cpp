@@ -158,7 +158,7 @@ namespace sago {
 
 		sago::database::DbColumn DbSyncDbMySql::GetColumn(const std::string& tablename, const std::string& columnname) {
 			sago::database::DbColumn ret;
-			cppdb::result res = *sql << "SELECT COLUMN_NAME,DATA_TYPE,CHARACTER_MAXIMUM_LENGTH,NUMERIC_PRECISION,NUMERIC_SCALE,IS_NULLABLE,COLUMN_DEFAULT IS NOT NULL,COLUMN_DEFAULT,EXTRA "
+			cppdb::result res = *sql << "SELECT COLUMN_NAME,DATA_TYPE,COALESCE(CHARACTER_MAXIMUM_LENGTH,0),COALESCE(NUMERIC_PRECISION,0),COALESCE(NUMERIC_SCALE,0),IS_NULLABLE,COLUMN_DEFAULT IS NOT NULL,COALESCE(COLUMN_DEFAULT,''),EXTRA "
 				"FROM INFORMATION_SCHEMA.COLUMNS "
 				"WHERE table_schema = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?" << schema << tablename << columnname;
 			if (res.next()) {

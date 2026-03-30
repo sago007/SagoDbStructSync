@@ -8,6 +8,9 @@ CONNECT="mysql:user=root;password=;database=testdb;host=mysql"
 
 MYSQL_CMD="mysql -h mysql -u root --database=testdb"
 
+echo "--- Cleanup: dropping test_table if it exists ---"
+$MYSQL_CMD -e "DROP TABLE IF EXISTS test_table"
+
 assert_eq() {
     local description="$1"
     local expected="$2"
