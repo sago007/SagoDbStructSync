@@ -38,7 +38,7 @@
         ],
         "unique_constraints": [
             {
-                "name": "PRIMARY",
+                "name": "PRIMARY_KEY",
                 "tablename": "test_table",
                 "columns": [
                     "item_id"
