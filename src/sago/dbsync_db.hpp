@@ -100,6 +100,10 @@ namespace sago {
 				throw DbException("Not implemented", "CreateColumn not implemented", tablename, "");
 			}
 
+			virtual void AlterColumnType(const std::string& tablename, const DbColumn& c) {
+				throw DbException("Not implemented", "AlterColumnType not implemented", tablename, "");
+			}
+
 			virtual void CreateUniqueConstraint(const DbUniqueConstraint& c) {
 				throw DbException("Not implemented", "CreateUniqueConstraint not implemented", c.tablename, "");
 			}

@@ -313,7 +313,6 @@ namespace sago {
 				std::string create_table_sql = "CREATE TABLE " + schema + "." + t.tablename + " ( " + this->sago_id + " SERIAL PRIMARY KEY )";
 				for (const sago::database::DbColumn& c : t.columns) {
 					if (c.autoIncrement) {
-						// PostgreSQL allows only one SERIAL column per table, so if we have one, use that.
 						create_table_sql = "CREATE TABLE " + schema + "." +  t.tablename + " ( " + c.name + " SERIAL PRIMARY KEY )";
 					}
 				}
@@ -324,9 +323,27 @@ namespace sago {
 			for (const sago::database::DbColumn& c : t.columns) {
 				if (!ColumnExists(t.tablename, c.name)) {
 					CreateColumn(t.tablename, c);
+				} else if (c.type == SagoDbType::TEXT) {
+					DbColumn existing = GetColumn(t.tablename, c.name);
+					if (existing.type == SagoDbType::TEXT && c.length > existing.length) {
+						AlterColumnType(t.tablename, c);
+					}
 				}
 			}
 			std::cout << "Creating table: " << t.tablename << "\n";
+		}
+
+		void DbSyncDbPostgres::AlterColumnType(const std::string& tablename, const sago::database::DbColumn& c) {
+			char buffer[200];
+			snprintf(buffer, sizeof(buffer), " VARCHAR(%i)", c.length);
+			std::string sql_str = "ALTER TABLE " + schema + "." + tablename + " ALTER COLUMN \"" + c.name + "\" TYPE" + buffer;
+			cppdb::statement st = *sql << sql_str;
+			try {
+				st.exec();
+			} catch (std::exception& e) {
+				std::cerr << "Failed: " << sql_str << "\n";
+				throw;
+			}
 		}
 
 		void DbSyncDbPostgres::CreateColumn(const std::string& tablename, const sago::database::DbColumn& c) {

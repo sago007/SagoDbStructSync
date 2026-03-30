@@ -272,7 +272,6 @@ namespace sago {
 				std::string create_table_sql = "CREATE TABLE " + schema + "." + t.tablename + " ( " + this->sago_id + " INT(20) NOT NULL AUTO_INCREMENT UNIQUE )";
 				for (const sago::database::DbColumn& c : t.columns) {
 					if (c.autoIncrement) {
-						//MySQL is limited to one auto increment coloumn, so if we have one then use that.
 						create_table_sql = "CREATE TABLE " + schema + "." + t.tablename + " ( " + c.name + " INT(20) NOT NULL AUTO_INCREMENT UNIQUE )";
 					}
 				}
@@ -283,9 +282,31 @@ namespace sago {
 			for (const sago::database::DbColumn& c : t.columns) {
 				if (!ColumnExists(t.tablename, c.name)) {
 					CreateColumn(t.tablename, c);
+				} else if (c.type == SagoDbType::TEXT) {
+					DbColumn existing = GetColumn(t.tablename, c.name);
+					if (existing.type == SagoDbType::TEXT && c.length > existing.length) {
+						AlterColumnType(t.tablename, c);
+					}
 				}
 			}
 			std::cout << "Creating table: " << t.tablename << "\n";
+		}
+
+		void DbSyncDbMySql::AlterColumnType(const std::string& tablename, const sago::database::DbColumn& c) {
+			std::string sql_str = "ALTER TABLE " + schema + "." + tablename + " MODIFY COLUMN `" + c.name + "`";
+			char buffer[200];
+			snprintf(buffer, sizeof(buffer), " VARCHAR(%i) ", c.length);
+			sql_str += buffer;
+			if (!c.nullable) {
+				sql_str += " NOT NULL";
+			}
+			cppdb::statement st = *sql << sql_str;
+			try {
+				st.exec();
+			} catch (std::exception& e) {
+				std::cerr << "Failed: " << sql_str << "\n";
+				throw;
+			}
 		}
 
 		void DbSyncDbMySql::CreateColumn(const std::string& tablename, const sago::database::DbColumn& c) {

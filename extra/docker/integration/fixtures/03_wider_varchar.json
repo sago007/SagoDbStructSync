@@ -1,0 +1,50 @@
+{
+    "databasemodel": {
+        "tables": [
+            {
+                "tablename": "test_table",
+                "columns": [
+                    {
+                        "name": "item_id",
+                        "type": "NUMBER",
+                        "length": 20,
+                        "scale": 0,
+                        "nullable": false,
+                        "autoIncrement": true
+                    },
+                    {
+                        "name": "title",
+                        "type": "TEXT",
+                        "length": 100,
+                        "scale": 0,
+                        "nullable": false
+                    },
+                    {
+                        "name": "status",
+                        "type": "NUMBER",
+                        "length": 3,
+                        "scale": 0,
+                        "nullable": true
+                    },
+                    {
+                        "name": "description",
+                        "type": "TEXT",
+                        "length": 200,
+                        "scale": 0,
+                        "nullable": true
+                    }
+                ]
+            }
+        ],
+        "unique_constraints": [
+            {
+                "name": "PRIMARY",
+                "tablename": "test_table",
+                "columns": [
+                    "item_id"
+                ]
+            }
+        ],
+        "foreign_keys": []
+    }
+}

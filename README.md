@@ -31,5 +31,27 @@ SagoDbStructSync is my attempt to create a small program/library that for trivia
 }
 ```
 
+## Running the integration tests
+
+The project includes a Docker-based integration test suite that tests against real MySQL and PostgreSQL databases. You need Docker and Docker Compose installed.
+
+```bash
+docker compose -f extra/docker/docker-compose.yml up --build --abort-on-container-exit --exit-code-from test-runner
+```
+
+This starts MySQL 8.0 and PostgreSQL 16 containers, builds the project in a test-runner container, and runs the full test suite covering:
+
+- Creating tables from a JSON model
+- Appending new fields to existing tables
+- Widening VARCHAR columns
+- Applying a model with fewer fields (existing columns are preserved)
+- Ensuring VARCHAR columns are never made narrower
+
+To clean up the containers afterwards:
+
+```bash
+docker compose -f extra/docker/docker-compose.yml down
+```
+
 ## License
 The source is under the MIT license. Be aware that the final product is under the GPLv2 if compiled against the MySQL library.
